@@ -2,12 +2,6 @@
 
 This project scrapes news articles from AllSides.com, extracts their full text, and classifies their political leaning using AI. It maintains a dataset of articles that grows over time as you collect more data.
 
-## Files and Their Purpose
-
-- **mergedTest.py**: Main script for scraping articles from AllSides, extracting their full text, and managing the dataset.
-- **political_leaning_classifier.py**: Script for classifying articles' political leanings using the DeepSeek API.
-- **article_retriever.py**: (Optional) Helper script for retrieving article text using multiple methods.
-
 ## Requirements
 
 - Python 3.7+
@@ -18,62 +12,51 @@ Install the required packages using pip:
 pip install pandas tqdm openai beautifulsoup4 newspaper3k requests cloudscraper
 ```
 
-## Basic Usage
+## Usage
 
-### Scraping New Articles
+The project provides a single script `news_processor.py` with two main modes:
 
-To scrape new articles from AllSides without classification:
+### 1. Initial Setup Mode
+
+For your first run or when you want to start fresh:
+
 ```bash
-python mergedTest.py
+python news_processor.py --initial-setup
 ```
 
 This will:
-1. Retrieve articles from AllSides
-2. Extract their full text
-3. Add them to your existing dataset (if any)
-4. Save the results in both JSON and CSV formats
+- Scrape all articles from AllSides
+- Extract their full text
+- Classify their political leaning using the DeepSeek API
+- Save everything to both JSON and CSV
 
-### Scraping Articles with Classification
+### 2. Update Mode (Default)
 
-To scrape new articles and classify them:
-```bash
-python mergedTest.py --classify
-```
-
-This will perform all the steps above, plus classify the political leaning of new articles using the DeepSeek API.
-
-### Scraping Articles and Classifying All Articles (Including Existing Ones)
+For regular updates - only processes new articles:
 
 ```bash
-python mergedTest.py --classify-all
+python news_processor.py
+# or
+python news_processor.py --update
 ```
 
-This will scrape new articles, classify them, and also re-evaluate the political leaning of all existing articles.
-
-### Skipping Text Re-extraction for Problematic Articles
-
-To avoid re-trying text extraction for articles that previously failed:
-```bash
-python mergedTest.py --classify --skip-text-extraction
-```
-
-### Running Only Classification 
-
-If you want to classify articles without scraping new ones:
-```bash
-python political_leaning_classifier.py
-```
+This will:
+- Load your existing articles
+- Find only new articles from AllSides
+- Extract full text for only those new articles
+- Classify only the new articles
+- Merge with your existing dataset
+- Never re-process articles you already have
 
 ## Command-Line Arguments
 
-`mergedTest.py` accepts the following arguments:
+`news_processor.py` accepts the following arguments:
 
+- `--initial-setup`: Run full initial setup (scrape, extract text, classify all)
+- `--update`: Update mode - only process new articles (default if no mode specified)
 - `--url`: URL to scrape (default: "https://www.allsides.com/unbiased-balanced-news")
-- `--classify`: Flag to classify new articles for political leaning
-- `--classify-all`: Flag to classify all articles (including existing ones)
 - `--json-path`: Path to save/load JSON file (default: "allsides_articles.json")
 - `--csv-path`: Path to save CSV file (default: "allsides_articles.csv")
-- `--skip-text-extraction`: Skip attempting to extract missing text from existing articles
 
 ## Understanding the Classification Process
 
@@ -86,32 +69,13 @@ The political leaning classifier uses the DeepSeek API to analyze article conten
 
 The system also compares the AI classification with AllSides' own source rating to see how often they match.
 
-## How Article Processing Works
+## How It Works
 
 1. **Article Scraping**: Articles are scraped from AllSides, including metadata like title, source outlet, and source rating.
-2. **Full Text Extraction**: The system attempts to extract the full text of each article using the original source URL.
+2. **Full Text Extraction**: The system extracts the full text of each article using the original source URL.
 3. **Deduplication**: The system checks for duplicates to prevent re-adding articles you've already scraped.
-4. **Classification**: If enabled, the system uses the DeepSeek API to classify the political leaning of articles.
+4. **Classification**: The system uses the DeepSeek API to classify the political leaning of articles.
 5. **Dataset Management**: All articles are saved in both JSON and CSV formats for easy analysis.
-
-## Common Workflow
-
-A typical workflow looks like:
-
-1. Run an initial scrape to create your dataset:
-   ```bash
-   python mergedTest.py --classify
-   ```
-
-2. Periodically add new articles:
-   ```bash
-   python mergedTest.py --classify --skip-text-extraction
-   ```
-
-3. Occasionally re-classify all articles (if needed):
-   ```bash
-   python mergedTest.py --classify-all --skip-text-extraction
-   ```
 
 ## Troubleshooting
 
@@ -122,6 +86,4 @@ A typical workflow looks like:
 ## Data Files
 
 - **allsides_articles.json**: Main JSON file containing all article data.
-- **allsides_articles.csv**: CSV version of the same data for easy import into analysis tools.
-- **allsides_articles_classified.json**: (Generated by political_leaning_classifier.py) Same data with classification added.
-- **allsides_articles_classified.csv**: CSV version of the classified data. 
+- **allsides_articles.csv**: CSV version of the same data for easy import into analysis tools. 
