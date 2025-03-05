@@ -4,27 +4,152 @@ import time
 import pandas as pd
 import os
 import json
+import random
+import requests
+import re
+from urllib.parse import urlparse
 from newspaper import Article
+
+# Common headers to mimic a browser
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.1 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:95.0) Gecko/20100101 Firefox/95.0",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 15_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
+]
+
+def get_random_user_agent():
+    """Get a random user agent to avoid detection"""
+    return random.choice(USER_AGENTS)
 
 def extract_article_text(url):
     """
-    Extract the text content from an article URL using newspaper3k library.
-    Includes error handling for common issues.
+    Extract the text content from an article URL using multiple methods with fallbacks.
+    Returns the article text if successful, or an error message if all methods fail.
     """
+    print(f"Attempting to extract text from: {url}")
+    
+    # Method 1: Try newspaper3k first (most reliable when it works)
     try:
         article = Article(url)
         article.download()
-        # Add a timeout to prevent hanging on problematic downloads
         article.parse()
         
-        # If text is empty, try an alternative approach
-        if not article.text or len(article.text.strip()) < 20:  # Less than 20 chars is likely not a valid article
-            return "Insufficient text extracted"
-            
-        return article.text
+        if article.text and len(article.text.strip()) > 100:
+            print(f"Successfully extracted with newspaper3k: {url}")
+            return article.text
     except Exception as e:
-        print(f"Error extracting text from {url}: {str(e)}")
-        return f"Failed to extract article text: {str(e)[:100]}"
+        print(f"Newspaper extraction failed for {url}: {str(e)}")
+    
+    # Method 2: Try BeautifulSoup as fallback
+    try:
+        headers = {
+            "User-Agent": get_random_user_agent(),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Referer": "https://www.google.com/",
+            "DNT": "1",
+        }
+        
+        response = requests.get(url, headers=headers, timeout=15, verify=True)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Remove unwanted elements
+            for element in soup.find_all(['script', 'style', 'nav', 'footer', 'header']):
+                element.decompose()
+            
+            # Apply site-specific extractors
+            domain = urlparse(url).netloc
+            
+            # Reuters specific extraction
+            if 'reuters.com' in domain:
+                paragraphs = soup.select('p.paragraph')
+                if paragraphs:
+                    content = '\n'.join([p.get_text(strip=True) for p in paragraphs])
+                    if content and len(content) > 100:
+                        print(f"Successfully extracted from Reuters: {url}")
+                        return content
+            
+            # WSJ specific extraction
+            if 'wsj.com' in domain:
+                article_body = soup.select('div.article-content, div.wsj-snippet-body')
+                if article_body:
+                    content = article_body[0].get_text(separator='\n', strip=True)
+                    if content and len(content) > 100:
+                        print(f"Successfully extracted from WSJ: {url}")
+                        return content
+            
+            # Newsweek specific extraction
+            if 'newsweek.com' in domain:
+                article_body = soup.select('div.article-body')
+                if article_body:
+                    content = article_body[0].get_text(separator='\n', strip=True)
+                    if content and len(content) > 100:
+                        print(f"Successfully extracted from Newsweek: {url}")
+                        return content
+            
+            # General article container extraction
+            article_containers = soup.select("article, .article, .post, .content, .article-content, .post-content, .story-content, .entry-content, main")
+            
+            if article_containers:
+                # Use the first found container
+                content = article_containers[0].get_text(separator='\n', strip=True)
+                if content and len(content.strip()) > 100:
+                    print(f"Successfully extracted with BeautifulSoup container: {url}")
+                    return content
+            
+            # Fallback to paragraph extraction
+            paragraphs = soup.find_all('p')
+            content = '\n'.join([p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 40])
+            
+            # Basic cleaning
+            content = re.sub(r'\n+', '\n', content)
+            content = re.sub(r'\s+', ' ', content)
+            
+            if content and len(content.strip()) > 100:
+                print(f"Successfully extracted with BeautifulSoup paragraphs: {url}")
+                return content
+    except Exception as e:
+        print(f"BeautifulSoup extraction failed for {url}: {str(e)}")
+    
+    # Method 3: Try archive.org as a last resort
+    try:
+        wayback_url = f"https://web.archive.org/web/2023/{url}"
+        headers = {"User-Agent": get_random_user_agent()}
+        response = requests.get(wayback_url, headers=headers, timeout=15)
+        
+        if response.status_code == 200:
+            # Try to extract from archived page with newspaper
+            try:
+                article = Article(wayback_url)
+                article.download()
+                article.parse()
+                if article.text and len(article.text) > 100:
+                    print(f"Successfully extracted from web archive using newspaper: {url}")
+                    return article.text
+            except:
+                pass
+                
+            # Fallback to BS4 on archived page
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Remove unwanted elements
+            for element in soup.find_all(['script', 'style', 'nav', 'footer', 'header']):
+                element.decompose()
+            
+            # Extract paragraphs from the main content
+            paragraphs = soup.find_all('p')
+            content = '\n'.join([p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 40])
+            
+            if content and len(content) > 100:
+                print(f"Successfully extracted from web archive using BeautifulSoup: {url}")
+                return content
+    except Exception as e:
+        print(f"Archive extraction failed for {url}: {str(e)}")
+    
+    # If all methods failed, return error message
+    return "Failed to extract article text after multiple attempts"
 
 def get_original_source(article_url, scraper, headers):
     """
@@ -162,10 +287,11 @@ def merge_articles(existing_articles, new_articles):
             # and the new one does, update the existing article
             existing_article = existing_links[article['link']]
             if ('full_text' not in existing_article or 
-                existing_article['full_text'] == "Not available" or 
-                existing_article['full_text'] == "Failed to extract article text"):
-                if 'full_text' in article and article['full_text'] not in ["Not available", "Failed to extract article text"]:
-                    existing_article['full_text'] = article['full_text']
+                existing_article['full_text'] in ["", "Not available", "Failed to extract article text", "Insufficient text extracted"] or
+                existing_article['full_text'].startswith("Failed to extract article text:")):
+                if 'original_source' in article and article['original_source'] != "Not found":
+                    print(f"Attempting to extract text for existing article: {article['title']}")
+                    existing_article['full_text'] = extract_article_text(article['original_source'])
     
     # Combine existing and new unique articles
     combined = list(existing_links.values()) + unique_new_articles
@@ -183,6 +309,22 @@ if __name__ == '__main__':
     # Load existing articles
     existing_articles = load_existing_articles(json_path)
     print(f"Loaded {len(existing_articles)} existing articles")
+    
+    # Find articles with missing text and try to fix them
+    missing_text_count = 0
+    for article in existing_articles:
+        if ('full_text' not in article or 
+            not article['full_text'] or 
+            article['full_text'] in ["", "Not available", "Failed to extract article text", "Insufficient text extracted"] or
+            article['full_text'].startswith("Failed to extract article text:")):
+            if 'original_source' in article and article['original_source'] and article['original_source'] != "Not found":
+                print(f"Attempting to extract missing text for: {article['title']}")
+                article['full_text'] = extract_article_text(article['original_source'])
+                missing_text_count += 1
+                # Add a delay to be nice to servers
+                time.sleep(random.uniform(1.0, 2.0))
+    
+    print(f"Attempted to fix {missing_text_count} articles with missing text")
     
     # Merge with new articles
     all_articles = merge_articles(existing_articles, new_articles)
