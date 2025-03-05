@@ -221,7 +221,7 @@ def scrape_allsides_page(url):
             else:
                 rating = "Not rated"
             if rating == "Not rated":
-                rating = "Far Right"
+                rating = "Right"
         else:
             outlet = "No source found"
             source_url = ""
