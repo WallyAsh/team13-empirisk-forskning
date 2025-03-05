@@ -93,7 +93,55 @@ Do not include any explanations or additional text.
         return "Error"
 
 
-def process_articles(json_file, output_file=None, limit=None):
+def classify_single_article(article):
+    """
+    Classify a single article - can be imported by other scripts.
+    
+    Args:
+        article: A dictionary containing article data
+    
+    Returns:
+        The updated article with classification added
+    """
+    # Skip if already classified
+    if 'ai_political_leaning' in article and article['ai_political_leaning'] not in ["", "No content", "Error"]:
+        return article
+    
+    # Get required fields
+    title = article.get('title', '')
+    full_text = article.get('full_text', '')
+    source_outlet = article.get('source_outlet', '')
+    
+    # Skip articles with no text content
+    if not full_text or full_text in ["Not available", "Failed to extract article text"]:
+        article['ai_political_leaning'] = "No content"
+        article['match_with_source'] = False
+        return article
+    
+    # Classify the article
+    classification = classify_political_leaning(title, full_text, source_outlet)
+    
+    # Store the result
+    article['ai_political_leaning'] = classification
+    
+    # Compare with existing rating if available
+    source_rating = article.get('source_rating', '')
+    if source_rating:
+        # Normalize source_rating to match our categories
+        normalized_rating = source_rating
+        if source_rating == "Far Left":
+            normalized_rating = "Left"
+        elif source_rating == "Far Right":
+            normalized_rating = "Right"
+            
+        article['match_with_source'] = classification == normalized_rating
+    else:
+        article['match_with_source'] = None
+    
+    return article
+
+
+def process_articles(json_file, output_file=None, limit=None, skip_classified=True):
     """
     Process articles from a JSON file and classify their political leaning.
     
@@ -101,6 +149,7 @@ def process_articles(json_file, output_file=None, limit=None):
         json_file: Path to the JSON file containing articles
         output_file: Path to save the results (default: adds '_classified' to input filename)
         limit: Maximum number of articles to process (default: None for all)
+        skip_classified: Whether to skip articles that already have a classification
     """
     # Load articles from JSON
     try:
@@ -119,50 +168,34 @@ def process_articles(json_file, output_file=None, limit=None):
     else:
         articles_to_process = articles
     
+    # Count articles that already have classifications
+    already_classified = sum(1 for a in articles_to_process 
+                            if 'ai_political_leaning' in a 
+                            and a['ai_political_leaning'] not in ["", "No content", "Error"])
+    
+    if already_classified > 0 and skip_classified:
+        print(f"Skipping {already_classified} articles that already have classifications")
+    
     # Process each article
-    success_count = 0
+    newly_classified = 0
     for i, article in enumerate(tqdm(articles_to_process, desc="Classifying articles")):
+        # Skip if already classified and skip_classified is True
+        if skip_classified and 'ai_political_leaning' in article and article['ai_political_leaning'] not in ["", "No content", "Error"]:
+            continue
+            
         if i > 0:
             # Random delay between requests to avoid rate limits
             time.sleep(random.uniform(0.5, 2.0))
         
-        # Get required fields
-        title = article.get('title', '')
-        full_text = article.get('full_text', '')
-        source_outlet = article.get('source_outlet', '')
-        
-        # Skip articles with no text content
-        if not full_text or full_text in ["Not available", "Failed to extract article text"]:
-            article['ai_political_leaning'] = "No content"
-            article['match_with_source'] = False
-            continue
-        
         # Classify the article
-        classification = classify_political_leaning(title, full_text, source_outlet)
-        
-        # Store the result
-        article['ai_political_leaning'] = classification
-        
-        # Compare with existing rating if available
-        source_rating = article.get('source_rating', '')
-        if source_rating:
-            # Normalize source_rating to match our categories
-            normalized_rating = source_rating
-            if source_rating == "Far Left":
-                normalized_rating = "Left"
-            elif source_rating == "Far Right":
-                normalized_rating = "Right"
-                
-            article['match_with_source'] = classification == normalized_rating
-        else:
-            article['match_with_source'] = None
-        
-        success_count += 1
+        classify_single_article(article)
+        newly_classified += 1
     
-    print(f"Successfully classified {success_count} out of {len(articles_to_process)} articles")
+    print(f"Newly classified {newly_classified} articles")
+    print(f"Total classified articles: {already_classified + newly_classified}")
     
     # Calculate statistics
-    ratings = [a.get('ai_political_leaning', '') for a in articles_to_process if a.get('ai_political_leaning', '') != "No content"]
+    ratings = [a.get('ai_political_leaning', '') for a in articles_to_process if a.get('ai_political_leaning', '') not in ["", "No content", "Error"]]
     matches = [a.get('match_with_source', False) for a in articles_to_process if a.get('match_with_source', None) is not None]
     
     print("\nClassification Distribution:")
@@ -190,9 +223,9 @@ def process_articles(json_file, output_file=None, limit=None):
 
 
 if __name__ == "__main__":
-    json_file = "allsides_articles.json" 
+    json_file = "allsides_articles.json"  # Fix the path to be relative to the scrape directory
     
-    # Process all articles (no limit)
-    process_articles(json_file, limit=None)
+    # Process all articles, skipping those already classified
+    process_articles(json_file, limit=None, skip_classified=True)
     
     print("\nDone! All articles have been classified.") 

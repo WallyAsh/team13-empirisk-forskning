@@ -9,6 +9,15 @@ import requests
 import re
 from urllib.parse import urlparse
 from newspaper import Article
+import sys
+
+# Import the classifier (add this after imports)
+try:
+    from political_leaning_classifier import classify_single_article, process_articles
+    CLASSIFIER_AVAILABLE = True
+except ImportError:
+    print("Note: Political leaning classifier not available. Classification features disabled.")
+    CLASSIFIER_AVAILABLE = False
 
 # Common headers to mimic a browser
 USER_AGENTS = [
@@ -261,10 +270,15 @@ def load_existing_articles(file_path):
             return []
     return []
 
-def merge_articles(existing_articles, new_articles):
+def merge_articles(existing_articles, new_articles, classify=False):
     """
     Merge new articles with existing ones, avoiding duplicates.
     Uses article link as the unique identifier.
+    
+    Args:
+        existing_articles: List of existing article dictionaries
+        new_articles: List of new article dictionaries
+        classify: Whether to classify new articles for political leaning
     """
     # Create a dict of existing articles for faster lookup
     existing_links = {article['link']: article for article in existing_articles}
@@ -278,74 +292,117 @@ def merge_articles(existing_articles, new_articles):
                 # Try to extract article text if it's missing but we have the original source
                 if article['original_source'] != "Not found":
                     article['full_text'] = extract_article_text(article['original_source'])
-                else:
-                    article['full_text'] = "Not available"
+            
+            # Classify the article if requested and classifier is available
+            if classify and CLASSIFIER_AVAILABLE and 'full_text' in article and article['full_text']:
+                try:
+                    article = classify_single_article(article)
+                    print(f"Classified: {article['title']} as {article.get('ai_political_leaning', 'Unknown')}")
+                except Exception as e:
+                    print(f"Error classifying article: {e}")
             
             unique_new_articles.append(article)
-        else:
-            # If the article already exists but doesn't have full text, 
-            # and the new one does, update the existing article
-            existing_article = existing_links[article['link']]
-            if ('full_text' not in existing_article or 
-                existing_article['full_text'] in ["", "Not available", "Failed to extract article text", "Insufficient text extracted"] or
-                existing_article['full_text'].startswith("Failed to extract article text:")):
-                if 'original_source' in article and article['original_source'] != "Not found":
-                    print(f"Attempting to extract text for existing article: {article['title']}")
-                    existing_article['full_text'] = extract_article_text(article['original_source'])
-    
-    # Combine existing and new unique articles
-    combined = list(existing_links.values()) + unique_new_articles
-    
-    return combined
+            existing_links[article['link']] = article
+        
+    # Return the merged list of articles
+    return existing_articles + unique_new_articles
 
 if __name__ == '__main__':
-    url = "https://www.allsides.com/unbiased-balanced-news"
-    new_articles = scrape_allsides_page(url)
+    import argparse
     
-    # Define file paths
-    json_path = "scrape/allsides_articles.json"
-    csv_path = "scrape/allsides_articles.csv"
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Scrape AllSides news articles and analyze political bias')
+    parser.add_argument('--url', default="https://www.allsides.com/unbiased-balanced-news", 
+                      help='URL to scrape (default: AllSides balanced news page)')
+    parser.add_argument('--classify', action='store_true',
+                      help='Classify articles for political leaning')
+    parser.add_argument('--classify-all', action='store_true',
+                      help='Classify all articles, including existing ones')
+    parser.add_argument('--json-path', default="allsides_articles.json",
+                      help='Path to save/load JSON file (default: allsides_articles.json)')
+    parser.add_argument('--csv-path', default="allsides_articles.csv",
+                      help='Path to save CSV file (default: allsides_articles.csv)')
+    parser.add_argument('--skip-text-extraction', action='store_true',
+                      help='Skip attempting to extract missing text from existing articles')
+    
+    args = parser.parse_args()
+    
+    # Scrape new articles
+    new_articles = scrape_allsides_page(args.url)
     
     # Load existing articles
-    existing_articles = load_existing_articles(json_path)
+    existing_articles = load_existing_articles(args.json_path)
     print(f"Loaded {len(existing_articles)} existing articles")
     
-    # Find articles with missing text and try to fix them
+    # Find articles with missing text and try to fix them (only if not skipped)
     missing_text_count = 0
-    for article in existing_articles:
-        if ('full_text' not in article or 
-            not article['full_text'] or 
-            article['full_text'] in ["", "Not available", "Failed to extract article text", "Insufficient text extracted"] or
-            article['full_text'].startswith("Failed to extract article text:")):
-            if 'original_source' in article and article['original_source'] and article['original_source'] != "Not found":
-                print(f"Attempting to extract missing text for: {article['title']}")
-                article['full_text'] = extract_article_text(article['original_source'])
-                missing_text_count += 1
-                # Add a delay to be nice to servers
-                time.sleep(random.uniform(1.0, 2.0))
-    
-    print(f"Attempted to fix {missing_text_count} articles with missing text")
+    if not args.skip_text_extraction:
+        print("Checking for articles with missing text...")
+        for article in existing_articles:
+            if ('full_text' not in article or 
+                not article['full_text'] or 
+                article['full_text'] in ["", "Not available", "Failed to extract article text", "Insufficient text extracted"] or
+                article['full_text'].startswith("Failed to extract article text:")):
+                if 'original_source' in article and article['original_source'] and article['original_source'] != "Not found":
+                    print(f"Attempting to extract missing text for: {article['title']}")
+                    article['full_text'] = extract_article_text(article['original_source'])
+                    missing_text_count += 1
+                    # Add a delay to be nice to servers
+                    time.sleep(random.uniform(1.0, 2.0))
+        
+        print(f"Attempted to fix {missing_text_count} articles with missing text")
+    else:
+        print("Skipping text extraction for existing articles")
     
     # Merge with new articles
-    all_articles = merge_articles(existing_articles, new_articles)
+    all_articles = merge_articles(existing_articles, new_articles, classify=args.classify)
     print(f"Added {len(new_articles)} new unique articles")
     print(f"Total articles in dataset: {len(all_articles)}")
     
     # Print details of new articles
-    print("\nNew articles added:")
-    for article in new_articles:
-        print(f"Title: {article['title']}")
-        print(f"Link: {article['link']}")
-        print(f"Source Outlet: {article['source_outlet']}")
-        print(f"Source Rating: {article['source_rating']}")
-        print("Full Text Preview:", article['full_text'][:100] if 'full_text' in article else "No text extracted", "...")
-        print("-" * 40)
+    if new_articles:
+        print("\nNew articles added:")
+        for article in new_articles:
+            print(f"Title: {article['title']}")
+            print(f"Link: {article['link']}")
+            print(f"Source Outlet: {article['source_outlet']}")
+            print(f"Source Rating: {article['source_rating']}")
+            print("Full Text Preview:", article['full_text'][:100] if 'full_text' in article else "No text extracted", "...")
+            if args.classify and CLASSIFIER_AVAILABLE and 'ai_political_leaning' in article:
+                print(f"AI Classification: {article['ai_political_leaning']}")
+            print("-" * 40)
+    
+    # Classify all articles if requested
+    if args.classify_all and CLASSIFIER_AVAILABLE:
+        print("Classifying all articles for political leaning...")
+        # Process in-place
+        for article in all_articles:
+            if ('ai_political_leaning' not in article or 
+                article.get('ai_political_leaning', '') in ["", "No content", "Error"]):
+                try:
+                    classify_single_article(article)
+                    time.sleep(random.uniform(0.5, 1.0))  # Delay to avoid rate limits
+                except Exception as e:
+                    print(f"Error classifying {article.get('title', 'Unknown article')}: {e}")
+                    
+        # Calculate statistics
+        if CLASSIFIER_AVAILABLE:
+            CATEGORIES = ["Left", "Lean Left", "Center", "Lean Right", "Right"]
+            ratings = [a.get('ai_political_leaning', '') for a in all_articles 
+                      if a.get('ai_political_leaning', '') not in ["", "No content", "Error"]]
+            
+            if ratings:
+                print("\nClassification Distribution:")
+                for category in CATEGORIES:
+                    count = ratings.count(category)
+                    percentage = count / len(ratings) * 100 if ratings else 0
+                    print(f"{category}: {count} ({percentage:.1f}%)")
     
     # Save the data as CSV and JSON
     df = pd.DataFrame(all_articles)
-    df.to_csv(csv_path, index=False)
-    print(f"CSV file saved as {csv_path}")
+    df.to_csv(args.csv_path, index=False)
+    print(f"CSV file saved as {args.csv_path}")
     
-    with open(json_path, 'w', encoding='utf-8') as f:
+    with open(args.json_path, 'w', encoding='utf-8') as f:
         json.dump(all_articles, f, indent=4)
-    print(f"JSON file saved as {json_path}")
+    print(f"JSON file saved as {args.json_path}")
