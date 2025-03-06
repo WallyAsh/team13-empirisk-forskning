@@ -31,7 +31,7 @@ DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
 if not DEEPSEEK_API_KEY:
     print("Warning: DEEPSEEK_API_KEY environment variable is not set.")
     print("Please set it using:")
-    print("  export DEEPSEEK_API_KEY='your-api-key-here'")
+    print("export DEEPSEEK_API_KEY='your-api-key-here'")
     print("or add it to your .env file and load it with a package like python-dotenv.")
 
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
@@ -43,8 +43,10 @@ client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
 CATEGORIES = ["Left", "Lean Left", "Center", "Lean Right", "Right"]
 
 # File paths
-DEFAULT_MODEL_JSON_PATH = "deepseek_articles.json"
-DEFAULT_MODEL_CSV_PATH = "deepseek_articles.csv"
+# Use absolute paths for model files
+DEEPSEEK_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_MODEL_JSON_PATH = os.path.join(DEEPSEEK_DIR, "deepseek_articles.json")
+DEFAULT_MODEL_CSV_PATH = os.path.join(DEEPSEEK_DIR, "deepseek_articles.csv")
 DEFAULT_DATABASE_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "articles_base.json")
 DEFAULT_DATABASE_CSV_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "articles_base.csv")
 
