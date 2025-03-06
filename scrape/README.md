@@ -39,7 +39,7 @@ scrape/
 For the easiest workflow, use the main `classify.py` launcher:
 
 ```bash
-# First time setup - scrape articles and set up the database
+# First time setup - scrape articles and set up the database  (! DO NOT RUN RIGHT NOW, BECAUSE WE ALREADY HAVE CREATED A DATABASE)
 python classify.py --initial-setup
 
 # Regular database updates
