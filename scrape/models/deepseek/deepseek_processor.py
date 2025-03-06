@@ -17,8 +17,23 @@ import sys
 from tqdm import tqdm
 from openai import OpenAI
 
-# DeepSeek API configuration
-DEEPSEEK_API_KEY = "sk-739ab05b7a6d4853bd6615e48387cd2f"
+# Try to load .env file if dotenv is installed
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load environment variables from .env file if it exists
+    print("Loaded environment variables from .env file")
+except ImportError:
+    print("python-dotenv not installed. Using environment variables directly.")
+    print("To use a .env file, install python-dotenv: pip install python-dotenv")
+
+# DeepSeek API configuration - Read from environment variable
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
+if not DEEPSEEK_API_KEY:
+    print("Warning: DEEPSEEK_API_KEY environment variable is not set.")
+    print("Please set it using:")
+    print("  export DEEPSEEK_API_KEY='your-api-key-here'")
+    print("or add it to your .env file and load it with a package like python-dotenv.")
+
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
 # Configure the OpenAI client to use DeepSeek

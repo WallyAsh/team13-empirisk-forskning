@@ -32,6 +32,29 @@ scrape/
 2. Update your API keys in the model processors:
    - Edit `models/deepseek/deepseek_processor.py` to update DeepSeek API key
 
+## API Key Setup
+
+### DeepSeek API
+
+For classification with the DeepSeek model, you'll need to set up your API key:
+
+1. Copy the example environment file:
+   ```
+   cp models/deepseek/.env.example models/deepseek/.env
+   ```
+
+2. Edit the `.env` file and replace `your_api_key_here` with your actual DeepSeek API key.
+
+3. Install python-dotenv (optional but recommended):
+   ```
+   pip install python-dotenv
+   ```
+
+Alternatively, you can set the API key as an environment variable:
+```
+export DEEPSEEK_API_KEY="your-api-key-here"
+```
+
 ## Usage
 
 ### Using the Main Launcher

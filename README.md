@@ -35,7 +35,7 @@ scrape/
 # Navigate to scrape directory
 cd scrape
 
-# First time setup
+# First time setup (! DO NOT RUN RIGHT NOW, BECAUSE WE ALREADY HAVE CREATED A DATABASE)
 python classify.py --initial-setup
 
 # Update database and classify with DeepSeek
