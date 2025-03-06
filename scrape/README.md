@@ -1,89 +1,118 @@
-# AllSides News Scraper and Political Bias Classifier
+# AllSides News Scraper and Multi-Model Bias Classifier
 
-This project scrapes news articles from AllSides.com, extracts their full text, and classifies their political leaning using DEEPSEEK AI. It maintains a dataset of articles that grows over time as you collect more data.
+This project scrapes articles from AllSides.com, extracts their full text, and classifies them according to their political bias using multiple AI models.
 
-## Requirements
+## Project Organization
 
-- Python 3.7+
-- Required packages: pandas, tqdm, openai, BeautifulSoup, newspaper3k, requests, cloudscraper
+The project is organized with a central database and model-specific classifiers:
 
-Install the required packages using pip:
-```bash
-pip install pandas tqdm openai beautifulsoup4 newspaper3k requests cloudscraper
 ```
+scrape/
+├── data/
+│   ├── articles_base.json       # Central database without classifications
+│   └── articles_base.csv        # CSV version of base data
+├── models/
+│   ├── deepseek/
+│   │   ├── deepseek_processor.py   # DeepSeek-specific classifier
+│   │   ├── deepseek_articles.json  # DeepSeek classifications
+│   │   └── deepseek_articles.csv   # CSV version with same data
+│   ├── chatgpt/                 # Future model implementation
+│   └── gemini/                  # Future model implementation
+├── update_database.py           # Central database manager
+└── classify.py                  # Main launcher script
+```
+
+## Setup
+
+1. Make sure you have all required packages:
+   ```
+   pip install requests bs4 newspaper3k cloudscraper tqdm pandas openai
+   ```
+
+2. Update your API keys in the model processors:
+   - Edit `models/deepseek/deepseek_processor.py` to update DeepSeek API key
 
 ## Usage
 
-The project provides a single script `news_processor.py` with two main modes:
+### Using the Main Launcher
 
-### 1. Initial Setup Mode
-
-For your first run or when you want to start fresh:
+For the easiest workflow, use the main `classify.py` launcher:
 
 ```bash
-python news_processor.py --initial-setup
+# First time setup - scrape articles and set up the database
+python classify.py --initial-setup
+
+# Regular database updates
+python classify.py --update-db
+
+# Classify NEW articles with DeepSeek
+python classify.py --model deepseek
+
+# List available models
+python classify.py --list-models
+
+# Update database and classify in one command
+python classify.py --update-db --model deepseek
+
+# Classify all articles (not just new ones)
+python classify.py --model deepseek --classify-all
+
+# Extract missing text from articles
+python classify.py --extract-missing
 ```
 
-This will:
-- Scrape all articles from AllSides
-- Extract their full text
-- Classify their political leaning using the DeepSeek API
-- Save everything to both JSON and CSV
+### Advanced: Direct Script Usage
 
-### 2. Update Mode (Default)
-
-For regular updates - only processes new articles:
+You can also use the scripts directly:
 
 ```bash
-python news_processor.py
-# or
-python news_processor.py --update
+# Update the central database
+python update_database.py
+
+# Classify with DeepSeek
+cd models/deepseek
+python deepseek_processor.py
 ```
-
-This will:
-- Load your existing articles
-- Find only new articles from AllSides
-- Extract full text for only those new articles
-- Classify only the new articles
-- Merge with your existing dataset
-- Never re-process articles you already have
-
-## Command-Line Arguments
-
-`news_processor.py` accepts the following arguments:
-
-- `--initial-setup`: Run full initial setup (scrape, extract text, classify all)
-- `--update`: Update mode - only process new articles (default if no mode specified)
-- `--url`: URL to scrape (default: "https://www.allsides.com/unbiased-balanced-news")
-- `--json-path`: Path to save/load JSON file (default: "allsides_articles.json")
-- `--csv-path`: Path to save CSV file (default: "allsides_articles.csv")
-
-## Understanding the Classification Process
-
-The political leaning classifier uses the DeepSeek API to analyze article content and determine its bias across five categories:
-- Left
-- Lean Left
-- Center
-- Lean Right
-- Right
-
-The system also compares the AI classification with AllSides' own source rating to see how often they match.
 
 ## How It Works
 
-1. **Article Scraping**: Articles are scraped from AllSides, including metadata like title, source outlet, and source rating.
-2. **Full Text Extraction**: The system extracts the full text of each article using the original source URL.
-3. **Deduplication**: The system checks for duplicates to prevent re-adding articles you've already scraped.
-4. **Classification**: The system uses the DeepSeek API to classify the political leaning of articles.
-5. **Dataset Management**: All articles are saved in both JSON and CSV formats for easy analysis.
+1. **Database Management** (`update_database.py`):
+   - Scrapes articles from AllSides
+   - Extracts full text from original sources
+   - Maintains a central database in `data/articles_base.json`
+   - No classification (models will do that)
 
-## Troubleshooting
+2. **Article Classification** (model processors):
+   - Each model (DeepSeek, ChatGPT, etc.) has its own processor
+   - Processors read from the central database
+   - They classify articles based on content
+   - Results are saved in model-specific files
+   - No scraping or text extraction (database handles that)
 
-- **API Rate Limits**: The DeepSeek API has rate limits. The script includes random delays to help avoid them.
-- **Text Extraction Failures**: Some articles may be behind paywalls or have anti-scraping measures. The system will mark these as failed.
-- **Import Errors**: Make sure all required packages are installed.
+3. **Multi-Model Launcher** (`classify.py`):
+   - Provides a unified interface for all operations
+   - Can update the database and run classifiers in one command
+   - Makes it easy to use multiple models
+
+## Adding New Models
+
+To add a new model (e.g., ChatGPT):
+
+1. Create a new folder: `models/chatgpt/`
+2. Copy and adapt `deepseek_processor.py` to create `chatgpt_processor.py`
+3. Update the API configuration and classification function
+4. Add the model to the `AVAILABLE_MODELS` list in `classify.py`
 
 ## Data Files
 
-- **allsides_articles.json**: Main JSON file containing all article data.
-- **allsides_articles.csv**: CSV version of the same data for easy import into analysis tools. 
+- **Central Database**:
+  - `data/articles_base.json` - All article data without classifications
+  - `data/articles_base.csv` - CSV version of the same data
+
+- **Model-Specific Data** (e.g., DeepSeek):
+  - `models/deepseek/deepseek_articles.json` - DeepSeek classifications
+  - `models/deepseek/deepseek_articles.csv` - CSV version
+
+## Future Development
+
+The `classify.py` script in the root directory will be developed in the future to act as a unified launcher for all model-specific processors. 
