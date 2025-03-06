@@ -1,6 +1,6 @@
 # AllSides News Scraper and Political Bias Classifier
 
-This project scrapes news articles from AllSides.com, extracts their full text, and classifies their political leaning using AI. It maintains a dataset of articles that grows over time as you collect more data.
+This project scrapes news articles from AllSides.com, extracts their full text, and classifies their political leaning using DEEPSEEK AI. It maintains a dataset of articles that grows over time as you collect more data.
 
 ## Requirements
 

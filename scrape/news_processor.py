@@ -438,6 +438,21 @@ def update_articles(url=DEFAULT_URL, json_path=DEFAULT_JSON_PATH, csv_path=DEFAU
     print(f"Found {len(truly_new_articles)} new articles")
     
     if truly_new_articles:
+        # Extract text for new articles
+        print("Extracting full text for new articles...")
+        for article in tqdm(truly_new_articles, desc="Extracting text"):
+            if not article.get('full_text') or article['full_text'] == "Not available...":
+                if article.get('original_source') and article['original_source'] != "Not found":
+                    try:
+                        article['full_text'] = extract_article_text(article['original_source'])
+                        # Add a small delay to avoid rate limiting
+                        time.sleep(random.uniform(2.0, 4.0))
+                    except Exception as e:
+                        print(f"Error extracting text for {article['title']}: {e}")
+                        article['full_text'] = "Not available..."
+                else:
+                    article['full_text'] = "Not available..."
+        
         # Classify new articles
         print("Classifying new articles...")
         for article in tqdm(truly_new_articles, desc="Classifying new articles"):
@@ -455,7 +470,7 @@ def update_articles(url=DEFAULT_URL, json_path=DEFAULT_JSON_PATH, csv_path=DEFAU
             print(f"Source: {article['source_outlet']} ({article['source_rating']})")
             if 'ai_political_leaning' in article:
                 print(f"AI Classification: {article['ai_political_leaning']}")
-            print(f"Full Text Preview: {article['full_text'][:100]}..." if article.get('full_text') else "No text extracted")
+            print(f"Full Text Preview: {article['full_text'][:100]}..." if article.get('full_text') and article['full_text'] != "Not available..." else "Not available...")
             print("-" * 40)
         
         # Print overall statistics 
