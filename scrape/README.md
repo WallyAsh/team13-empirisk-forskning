@@ -81,7 +81,7 @@ python classify.py --update-db --model deepseek
 python classify.py --model deepseek --classify-all
 
 # Extract missing text from articles
-python classify.py --extract-missing
+python update_database.py --enhanced-extract
 ```
 
 ### Advanced: Direct Script Usage

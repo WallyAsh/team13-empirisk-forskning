@@ -161,11 +161,26 @@ def get_original_source(article_url, scraper, headers):
         soup = BeautifulSoup(response.text, 'html.parser')
         
         # Look for the "Read It At" link
-        read_it_at_div = soup.find('div', class_='read-it-at')
+        read_it_at_div = soup.find('div', class_='read-more-story')
         if read_it_at_div:
             link = read_it_at_div.find('a')
             if link:
                 return link.get('href')
+        
+        # Try alternative methods to find original source
+        # Look for any link that might point to the original article
+        possible_containers = [
+            soup.select('.news-source a'),
+            soup.select('.field-name-field-story-url a'),
+            soup.select('.field-name-body a')
+        ]
+        
+        for container in possible_containers:
+            if container:
+                for link in container:
+                    href = link.get('href')
+                    if href and not href.startswith(('https://www.allsides.com', '/news')):
+                        return href
         
         return "Not found"
     except Exception as e:
@@ -338,9 +353,13 @@ def initial_setup(url=DEFAULT_URL, json_path=DATABASE_JSON_PATH, csv_path=DATABA
     print("Extracting full text for articles...")
     for article in tqdm(scraped_articles, desc="Extracting text"):
         if article.get('original_source') and article['original_source'] != "Not found":
-            article['full_text'] = extract_article_text(article['original_source'])
-            # Add a small delay to avoid rate limiting
-            time.sleep(random.uniform(1.0, 2.0))
+            try:
+                article['full_text'] = extract_article_text(article['original_source'])
+                # Add a small delay to avoid rate limiting
+                time.sleep(random.uniform(1.0, 2.0))
+            except Exception as e:
+                print(f"Error extracting text for {article['title']}: {e}")
+                article['full_text'] = "Not available..."
     
     # Save results
     save_articles(scraped_articles, json_path, csv_path)
@@ -417,6 +436,8 @@ def extract_missing_text(json_path=DATABASE_JSON_PATH, csv_path=DATABASE_CSV_PAT
     """
     Extract missing text from articles that don't have full text.
     """
+    print(f"Starting extract_missing_text function with path: {json_path}")
+    
     # Load existing articles
     existing_articles = load_existing_articles(json_path)
     if not existing_articles:
@@ -431,6 +452,16 @@ def extract_missing_text(json_path=DATABASE_JSON_PATH, csv_path=DATABASE_CSV_PAT
                            or article['full_text'] == "Not available..."]
     
     print(f"Found {len(articles_without_text)} articles without text")
+    
+    # Debug: Print first few articles without text to verify
+    if articles_without_text:
+        print("Sample of articles without text:")
+        for i, article in enumerate(articles_without_text[:3]):
+            print(f"  {i+1}. Title: {article.get('title', 'No title')}")
+            print(f"     Link: {article.get('link', 'No link')}")
+            print(f"     Original source: {article.get('original_source', 'None')}")
+    else:
+        print("No articles without text found. Nothing to do.")
     
     if articles_without_text:
         # Extract text for articles without text
@@ -447,12 +478,11 @@ def extract_missing_text(json_path=DATABASE_JSON_PATH, csv_path=DATABASE_CSV_PAT
                             if main_article['link'] == article['link']:
                                 main_article['full_text'] = text
                                 updated_count += 1
-                                break
                     
                     # Add a small delay to avoid rate limiting
                     time.sleep(random.uniform(2.0, 4.0))
                 except Exception as e:
-                    print(f"Error extracting text for {article['title']}: {e}")
+                    print(f"Error extracting text for {article.get('title', 'Unknown title')}: {e}")
         
         if updated_count > 0:
             # Save updated dataset
@@ -462,6 +492,91 @@ def extract_missing_text(json_path=DATABASE_JSON_PATH, csv_path=DATABASE_CSV_PAT
             print("\nNo articles were updated with missing text")
     else:
         print("No articles without text found. Dataset is complete.")
+
+def extract_missing_and_notfound(json_path=DATABASE_JSON_PATH, csv_path=DATABASE_CSV_PATH):
+    """
+    Extract missing text AND retry finding original sources for articles where they weren't found.
+    This combines the functionality of extract_missing_text and extract_notfound_articles.py.
+    """
+    print(f"Starting enhanced extraction process with path: {json_path}")
+    
+    # Load existing articles
+    existing_articles = load_existing_articles(json_path)
+    if not existing_articles:
+        print(f"No existing articles found in {json_path}")
+        return
+    
+    print(f"Loaded {len(existing_articles)} articles from {json_path}")
+    
+    # Process in two phases:
+    # 1. First, retry finding original sources for "Not found" articles
+    not_found_articles = [article for article in existing_articles if article.get('original_source') == "Not found"]
+    print(f"Found {len(not_found_articles)} articles with 'Not found' original sources")
+    
+    source_found_count = 0
+    
+    # Setup for source finding
+    headers = {
+        "User-Agent": get_random_user_agent(),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Referer": "https://www.google.com",
+        "DNT": "1"
+    }
+    scraper = cloudscraper.create_scraper()
+    
+    # Phase 1: Find original sources
+    if not_found_articles:
+        print("Retrying original source detection...")
+        for article in tqdm(not_found_articles, desc="Finding sources"):
+            try:
+                # Use the improved source finding method
+                original_source = get_original_source(article['link'], scraper, headers)
+                if original_source != "Not found":
+                    article['original_source'] = original_source
+                    source_found_count += 1
+                
+                # Small delay to avoid rate limiting
+                time.sleep(random.uniform(1.0, 2.0))
+            except Exception as e:
+                print(f"Error finding source for {article.get('title', 'Unknown title')}: {e}")
+    
+    print(f"Successfully found {source_found_count} original sources")
+    
+    # Phase 2: Now extract text for all articles without text
+    articles_without_text = [article for article in existing_articles 
+                          if ('full_text' not in article or not article['full_text'] or article['full_text'] == "Not available...")
+                          and article.get('original_source') != "Not found"]
+    
+    print(f"Found {len(articles_without_text)} articles without text but with original sources")
+    
+    if articles_without_text:
+        print("Extracting missing text...")
+        updated_count = 0
+        
+        for article in tqdm(articles_without_text, desc="Extracting text"):
+            try:
+                full_text = extract_article_text(article['original_source'])
+                if full_text != "Not available...":
+                    article['full_text'] = full_text
+                    updated_count += 1
+                
+                # Add a small delay to avoid rate limiting
+                time.sleep(random.uniform(1.0, 2.0))
+            except Exception as e:
+                print(f"Error extracting text from {article['original_source']}: {e}")
+        
+        print(f"\nSuccessfully extracted text for {updated_count} articles")
+    
+    # Save the updated dataset
+    if source_found_count > 0 or (articles_without_text and updated_count > 0):
+        save_articles(existing_articles, json_path, csv_path)
+        print(f"Updated dataset saved to {json_path} and {csv_path}")
+    else:
+        print("No updates were made to the dataset")
+    
+    # Print overall statistics
+    print_dataset_stats(existing_articles)
 
 #--------------------------------
 # Main
@@ -479,6 +594,8 @@ if __name__ == '__main__':
                       help='Update mode - only process new articles (default if no mode specified)')
     parser.add_argument('--extract-missing', action='store_true',
                       help='Extract missing text from articles that already exist')
+    parser.add_argument('--enhanced-extract', action='store_true',
+                      help='Enhanced extraction - both retry finding sources AND extract missing text')
     
     # Common options
     parser.add_argument('--url', default=DEFAULT_URL,
@@ -495,6 +612,8 @@ if __name__ == '__main__':
             initial_setup(args.url, args.json_path, args.csv_path)
         elif args.extract_missing:
             extract_missing_text(args.json_path, args.csv_path)
+        elif args.enhanced_extract:
+            extract_missing_and_notfound(args.json_path, args.csv_path)
         else:  # Default is update mode
             update_articles(args.url, args.json_path, args.csv_path)
     except KeyboardInterrupt:
