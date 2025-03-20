@@ -514,6 +514,7 @@ def extract_missing_and_notfound(json_path=DATABASE_JSON_PATH, csv_path=DATABASE
     print(f"Found {len(not_found_articles)} articles with 'Not found' original sources")
     
     source_found_count = 0
+    updated_count = 0
     
     # Setup for source finding
     headers = {
@@ -525,53 +526,92 @@ def extract_missing_and_notfound(json_path=DATABASE_JSON_PATH, csv_path=DATABASE
     }
     scraper = cloudscraper.create_scraper()
     
+    # Save progress periodically
+    save_interval = 10
+    last_save = 0
+    
     # Phase 1: Find original sources
     if not_found_articles:
         print("Retrying original source detection...")
-        for article in tqdm(not_found_articles, desc="Finding sources"):
+        for i, article in enumerate(tqdm(not_found_articles, desc="Finding sources")):
             try:
                 # Use the improved source finding method
                 original_source = get_original_source(article['link'], scraper, headers)
                 if original_source != "Not found":
                     article['original_source'] = original_source
                     source_found_count += 1
+                    
+                    # Try to immediately extract text too
+                    try:
+                        full_text = extract_article_text(original_source)
+                        if full_text != "Not available...":
+                            article['full_text'] = full_text
+                            updated_count += 1
+                            print(f"Found and extracted: {article.get('title', 'Unknown')[:40]}...")
+                    except Exception as text_err:
+                        print(f"Error extracting text: {text_err}")
+                
+                # Save progress periodically
+                if (i + 1) % save_interval == 0:
+                    print(f"\nIntermediate save at {i+1}/{len(not_found_articles)} articles")
+                    save_articles(existing_articles, json_path, csv_path)
+                    last_save = i + 1
                 
                 # Small delay to avoid rate limiting
                 time.sleep(random.uniform(1.0, 2.0))
             except Exception as e:
                 print(f"Error finding source for {article.get('title', 'Unknown title')}: {e}")
+                # Continue to next article despite error
+                continue
+    
+    # Save if we found any sources and haven't saved recently
+    if source_found_count > last_save:
+        print(f"\nSaving after finding {source_found_count} original sources")
+        save_articles(existing_articles, json_path, csv_path)
     
     print(f"Successfully found {source_found_count} original sources")
+    print(f"Successfully extracted text for {updated_count} articles")
     
-    # Phase 2: Now extract text for all articles without text
+    # Phase 2: Now extract text for all remaining articles without text
     articles_without_text = [article for article in existing_articles 
                           if ('full_text' not in article or not article['full_text'] or article['full_text'] == "Not available...")
                           and article.get('original_source') != "Not found"]
     
-    print(f"Found {len(articles_without_text)} articles without text but with original sources")
+    print(f"Found {len(articles_without_text)} remaining articles without text but with original sources")
     
     if articles_without_text:
         print("Extracting missing text...")
-        updated_count = 0
+        more_updated_count = 0
+        last_save = 0
         
-        for article in tqdm(articles_without_text, desc="Extracting text"):
+        for i, article in enumerate(tqdm(articles_without_text, desc="Extracting text")):
             try:
                 full_text = extract_article_text(article['original_source'])
                 if full_text != "Not available...":
                     article['full_text'] = full_text
-                    updated_count += 1
+                    more_updated_count += 1
+                
+                # Save progress periodically
+                if (i + 1) % save_interval == 0:
+                    print(f"\nIntermediate save at {i+1}/{len(articles_without_text)} articles")
+                    save_articles(existing_articles, json_path, csv_path)
+                    last_save = i + 1
                 
                 # Add a small delay to avoid rate limiting
                 time.sleep(random.uniform(1.0, 2.0))
             except Exception as e:
-                print(f"Error extracting text from {article['original_source']}: {e}")
+                print(f"Error extracting text from {article.get('original_source', 'Unknown URL')}: {e}")
+                # Continue to next article despite error
+                continue
         
-        print(f"\nSuccessfully extracted text for {updated_count} articles")
+        print(f"\nSuccessfully extracted text for additional {more_updated_count} articles")
     
-    # Save the updated dataset
-    if source_found_count > 0 or (articles_without_text and updated_count > 0):
+    # Save the final updated dataset
+    total_updated = updated_count + more_updated_count
+    if source_found_count > 0 or total_updated > 0:
         save_articles(existing_articles, json_path, csv_path)
         print(f"Updated dataset saved to {json_path} and {csv_path}")
+        print(f"Total updates: {source_found_count} new sources, {total_updated} articles with text")
     else:
         print("No updates were made to the dataset")
     
