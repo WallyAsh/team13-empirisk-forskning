@@ -30,6 +30,10 @@ def analyze_rating_differences():
     articles = load_deepseek_articles()
     df = pd.DataFrame(articles)
     
+    # Filter out articles with unavailable full text
+    df = df[df['full_text'] != "Not available..."]
+    print(f"\nTotal articles after filtering unavailable text: {len(df)}")
+    
     # Filter out articles with no rating difference
     df_with_diffs = df[df['rating_difference'].notna()]
     
