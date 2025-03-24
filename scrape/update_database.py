@@ -189,6 +189,7 @@ def get_original_source(article_url, scraper, headers):
 
 def scrape_allsides_page(url):
     """Scrape articles from an AllSides page."""
+    print("Initializing scraper...")
     headers = {
         "User-Agent": get_random_user_agent(),
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
@@ -199,67 +200,88 @@ def scrape_allsides_page(url):
         "DNT": "1"
     }
     
-    scraper = cloudscraper.create_scraper()
-    response = scraper.get(url, headers=headers)
-    if response.status_code != 200:
-        print(f"Error: Unable to retrieve page (status code {response.status_code})")
-        return []
-    
-    soup = BeautifulSoup(response.text, 'html.parser')
-    
-    # Select all news-item blocks inside the news-trio container
-    news_items = soup.select("div.news-trio div.news-item")
-    scraped_articles = []
-    
-    for item in news_items:
-        link_tag = item.find('a')
-        if link_tag is None:
-            continue
-
-        link = link_tag.get('href', 'No link found')
-        if link.startswith('/'):
-            link = "https://www.allsides.com" + link
-
-        title_div = link_tag.find('div', class_='news-title')
-        title = title_div.get_text(strip=True) if title_div else link_tag.get_text(strip=True)
+    try:
+        print("Creating cloudscraper instance...")
+        scraper = cloudscraper.create_scraper()
+        print(f"Fetching page from {url}...")
+        response = scraper.get(url, headers=headers)
         
-        source_tag = item.find('a', class_='source-area')
-        if source_tag:
-            outlet_tag = source_tag.find('div', class_='news-source')
-            outlet = outlet_tag.get_text(strip=True) if outlet_tag else source_tag.get_text(strip=True)
-            source_url = source_tag.get('href', 'No source URL found')
+        if response.status_code != 200:
+            print(f"Error: Unable to retrieve page (status code {response.status_code})")
+            print(f"Response content: {response.text[:200]}...")  # Print first 200 chars of response
+            return []
+        
+        print("Parsing HTML content...")
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Select all news-item blocks inside the news-trio container
+        print("Looking for news items...")
+        news_items = soup.select("div.news-trio div.news-item")
+        print(f"Found {len(news_items)} news items")
+        
+        scraped_articles = []
+        
+        for i, item in enumerate(news_items, 1):
+            print(f"Processing article {i}/{len(news_items)}...")
+            link_tag = item.find('a')
+            if link_tag is None:
+                print(f"Warning: No link found for article {i}")
+                continue
+
+            link = link_tag.get('href', 'No link found')
+            if link.startswith('/'):
+                link = "https://www.allsides.com" + link
+
+            title_div = link_tag.find('div', class_='news-title')
+            title = title_div.get_text(strip=True) if title_div else link_tag.get_text(strip=True)
             
-            img_tag = source_tag.find('img')
-            if img_tag:
-                alt_text = img_tag.get('alt', '')
-                if "Rating:" in alt_text:
-                    rating = alt_text.split("Rating:")[-1].strip()
+            source_tag = item.find('a', class_='source-area')
+            if source_tag:
+                outlet_tag = source_tag.find('div', class_='news-source')
+                outlet = outlet_tag.get_text(strip=True) if outlet_tag else source_tag.get_text(strip=True)
+                source_url = source_tag.get('href', 'No source URL found')
+                
+                img_tag = source_tag.find('img')
+                if img_tag:
+                    alt_text = img_tag.get('alt', '')
+                    if "Rating:" in alt_text:
+                        rating = alt_text.split("Rating:")[-1].strip()
+                    else:
+                        rating = "Not rated"
                 else:
                     rating = "Not rated"
             else:
+                outlet = "No source found"
+                source_url = "No source URL found"
                 rating = "Not rated"
-        else:
-            outlet = "No source found"
-            source_url = "No source URL found"
-            rating = "Not rated"
+            
+            print(f"Getting original source for article {i}...")
+            # Get the original source URL
+            original_source = get_original_source(link, scraper, headers)
+            
+            # Create article object
+            article = {
+                "title": title,
+                "link": link,
+                "source_outlet": outlet,
+                "source_url": source_url,
+                "source_rating": rating,
+                "original_source": original_source,
+                "full_text": "Not available..."  # Will be filled in later
+            }
+            
+            scraped_articles.append(article)
+            print(f"Successfully processed article {i}: {title[:50]}...")
         
-        # Get the original source URL
-        original_source = get_original_source(link, scraper, headers)
+        print(f"\nSuccessfully scraped {len(scraped_articles)} articles")
+        return scraped_articles
         
-        # Create article object
-        article = {
-            "title": title,
-            "link": link,
-            "source_outlet": outlet,
-            "source_url": source_url,
-            "source_rating": rating,
-            "original_source": original_source,
-            "full_text": "Not available..."  # Will be filled in later
-        }
-        
-        scraped_articles.append(article)
-    
-    return scraped_articles
+    except Exception as e:
+        print(f"Error during scraping: {str(e)}")
+        print("Full error details:", e.__class__.__name__)
+        import traceback
+        print(traceback.format_exc())
+        return []
 
 #--------------------------------
 # Data Management Functions
