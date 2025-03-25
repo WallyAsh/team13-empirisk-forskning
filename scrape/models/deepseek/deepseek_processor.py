@@ -65,10 +65,11 @@ def classify_political_leaning(title, full_text, source_outlet=None, max_tokens=
     else:
         text_to_analyze = f"{title}\n\n{full_text}"
     
-    outlet_info = f"Publication: {source_outlet}\n\n" if source_outlet else ""
+    # Remove source outlet information to prevent bias
+    # outlet_info = f"Publication: {source_outlet}\n\n" if source_outlet else ""
     
     prompt = f"""Analyze the following news article and determine its political leaning.
-{outlet_info}
+
 Article: {text_to_analyze}
 
 Based ONLY on the content of this article, classify it into one of the following categories:
