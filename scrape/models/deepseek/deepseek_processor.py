@@ -224,91 +224,92 @@ def print_classification_stats(articles):
 
 def classify_all(db_path=DEFAULT_DATABASE_JSON_PATH, model_json_path=DEFAULT_MODEL_JSON_PATH, model_csv_path=DEFAULT_MODEL_CSV_PATH):
     """
-    Classify all articles in the database.
+    Classify all articles in the database, preserving existing classifications.
     """
     # Load articles from database
     articles = load_articles(db_path)
     print(f"Loaded {len(articles)} articles from database")
     
-    # Check if model already has classifications for these articles
+    # Load existing model classifications
     existing_model_articles = load_existing_model_articles(model_json_path)
-    existing_links = {article['link'] for article in existing_model_articles}
+    print(f"Found {len(existing_model_articles)} existing classifications")
     
-    # Identify articles that need classification
+    # Create a dictionary of existing classifications for faster lookup
+    existing_classifications = {article['link']: article for article in existing_model_articles}
+    
+    # Track which articles need classification
     articles_to_classify = []
-    existing_articles = []
+    articles_to_preserve = []
     
     for article in articles:
-        if article['link'] in existing_links:
-            # Find the existing article with this link
-            for existing_article in existing_model_articles:
-                if existing_article['link'] == article['link']:
-                    existing_articles.append(article)
-                    break
+        if article['link'] in existing_classifications:
+            # Preserve the existing classification
+            existing_article = existing_classifications[article['link']]
+            article['ai_political_leaning'] = existing_article['ai_political_leaning']
+            article['match_with_source'] = existing_article.get('match_with_source', False)
+            articles_to_preserve.append(article)
         else:
             articles_to_classify.append(article)
     
-    print(f"Found {len(existing_articles)} articles already classified")
-    print(f"Found {len(articles_to_classify)} articles to classify")
+    print(f"\nFound {len(articles_to_classify)} new articles to classify")
+    print(f"Preserving {len(articles_to_preserve)} existing classifications")
     
-    # Classify articles
     if articles_to_classify:
-        print("Classifying articles...")
-        for article in tqdm(articles_to_classify, desc="Classifying"):
-            classify_article(article)
-            time.sleep(random.uniform(0.5, 1.0))  # Delay to avoid rate limits
+        # Classify new articles
+        print("\nClassifying new articles...")
+        for article in tqdm(articles_to_classify, desc="Classifying articles"):
+            article = classify_article(article)
+            # Add a small delay to avoid rate limiting
+            time.sleep(random.uniform(1.0, 2.0))
         
-        # Merge with existing classified articles
-        all_articles = existing_articles + articles_to_classify
-        
-        # Save results
-        save_model_articles(all_articles, model_json_path, model_csv_path)
-        
-        # Print statistics
-        print_classification_stats(all_articles)
+        # Combine preserved and new classifications
+        all_articles = articles_to_preserve + articles_to_classify
     else:
-        print("All articles already classified!")
-        print_classification_stats(existing_articles)
+        print("No new articles to classify")
+        all_articles = articles_to_preserve
     
-    print("\nClassification complete!")
+    # Save the combined results
+    save_model_articles(all_articles, model_json_path, model_csv_path)
+    
+    # Print statistics
+    print_classification_stats(all_articles)
+    
+    return all_articles
 
 def classify_new(db_path=DEFAULT_DATABASE_JSON_PATH, model_json_path=DEFAULT_MODEL_JSON_PATH, model_csv_path=DEFAULT_MODEL_CSV_PATH):
     """
-    Classify only new articles in the database.
+    Classify only new articles that haven't been classified yet.
     """
-    # Same as classify_all, but emphasizes that it only classifies new articles
-    classify_all(db_path, model_json_path, model_csv_path)
+    return classify_all(db_path, model_json_path, model_csv_path)
 
 #--------------------------------
 # Main
 #--------------------------------
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description='DeepSeek Article Classifier - Classify political bias of articles using DeepSeek API')
+    parser = argparse.ArgumentParser(description="DeepSeek Political Leaning Classifier")
     
-    # Main modes
-    parser.add_argument('--classify-all', action='store_true',
-                      help='Classify all articles in the database')
-    parser.add_argument('--classify-new', action='store_true',
-                      help='Classify only new articles (default)')
-    
-    # Common options
+    # File paths
     parser.add_argument('--db-path', default=DEFAULT_DATABASE_JSON_PATH,
                       help=f'Path to database JSON file (default: {DEFAULT_DATABASE_JSON_PATH})')
-    parser.add_argument('--json-path', default=DEFAULT_MODEL_JSON_PATH,
+    parser.add_argument('--model-json-path', default=DEFAULT_MODEL_JSON_PATH,
                       help=f'Path to save model JSON file (default: {DEFAULT_MODEL_JSON_PATH})')
-    parser.add_argument('--csv-path', default=DEFAULT_MODEL_CSV_PATH,
+    parser.add_argument('--model-csv-path', default=DEFAULT_MODEL_CSV_PATH,
                       help=f'Path to save model CSV file (default: {DEFAULT_MODEL_CSV_PATH})')
+    
+    # Classification mode
+    parser.add_argument('--classify-all', action='store_true',
+                      help='Classify all articles (including already classified ones)')
     
     args = parser.parse_args()
     
     try:
         if args.classify_all:
-            classify_all(args.db_path, args.json_path, args.csv_path)
-        else:  # Default is classify new
-            classify_new(args.db_path, args.json_path, args.csv_path)
+            classify_all(args.db_path, args.model_json_path, args.model_csv_path)
+        else:
+            classify_new(args.db_path, args.model_json_path, args.model_csv_path)
     except KeyboardInterrupt:
         print("\nOperation interrupted by user.")
     except Exception as e:
