@@ -65,27 +65,14 @@ def classify_political_leaning(title, full_text, source_outlet=None, max_tokens=
     else:
         text_to_analyze = f"{title}\n\n{full_text}"
     
-    outlet_info = f"Publication: {source_outlet}\n\n" if source_outlet else ""
-    
-    prompt = f"""Analyze the following news article and determine its political leaning.
-{outlet_info}
+    # Use a numerical rating scale instead of categorical labels
+    prompt = f"""Instructions: Political Bias Scale from -6 to 6, where -6 to -3 is left, -3 to -1 is lean-left, -1 to 1 is center, 1 to 3 is lean-right, and 3 to 6 is right. Leaning categories (like lean-left or lean-right) should indicate content that leans towards that side but does not strongly align with it. 
+
+A newspaper article is provided and you have to give it a decimal rating. Only analyze the article's content for language, framing, and overall tone to determine the political bias. Do NOT infer the news outlet or any external context beyond the article itself. If the bias is unclear, output the most appropriate rating based on the overall tone and content.
+
 Article: {text_to_analyze}
 
-Based ONLY on the content of this article, classify it into one of the following categories:
-- Left
-- Lean Left
-- Center
-- Lean Right
-- Right
-
-Consider factors such as:
-- Language and framing
-- Topics emphasized
-- Sources quoted
-- Overall narrative and tone
-
-Provide ONLY the category name as your answer (Left, Lean Left, Center, Lean Right, or Right). 
-Do not include any explanations or additional text.
+Output only a number between -6 and 6 that represents the political rating. No other text.
 """
 
     try:
@@ -97,16 +84,42 @@ Do not include any explanations or additional text.
             temperature=0.1
         )
         
-        # Extract the classification from the response
-        classification = response.choices[0].message.content.strip()
+        # Extract the numerical rating from the response
+        raw_response = response.choices[0].message.content.strip()
         
-        # Normalize the response to match our categories
-        for category in CATEGORIES:
-            if category.lower() in classification.lower():
-                return category
-        
-        # If no exact match, return the response
-        return classification
+        # Try to extract a number from the response
+        try:
+            # Remove any non-numeric characters except for decimal point and minus sign
+            cleaned_response = ''.join(c for c in raw_response if c.isdigit() or c == '.' or c == '-')
+            rating = float(cleaned_response)
+            
+            # Map the numerical rating to the categorical labels
+            if rating <= -3:
+                return "Left"
+            elif rating < -1:
+                return "Lean Left"
+            elif rating <= 1:
+                return "Center"
+            elif rating < 3:
+                return "Lean Right"
+            else:
+                return "Right"
+        except:
+            # If we can't extract a valid number, check for category names in the response
+            raw_response_lower = raw_response.lower()
+            if "left" in raw_response_lower and "lean" in raw_response_lower:
+                return "Lean Left"
+            elif "right" in raw_response_lower and "lean" in raw_response_lower:
+                return "Lean Right"
+            elif "left" in raw_response_lower:
+                return "Left"
+            elif "right" in raw_response_lower:
+                return "Right"
+            elif "center" in raw_response_lower:
+                return "Center"
+            else:
+                # Default to "No content" if we can't determine the classification
+                return "No content"
         
     except Exception as e:
         print(f"Error classifying article: {e}")
@@ -225,7 +238,11 @@ def print_classification_stats(articles):
 def classify_all(db_path=DEFAULT_DATABASE_JSON_PATH, model_json_path=DEFAULT_MODEL_JSON_PATH, model_csv_path=DEFAULT_MODEL_CSV_PATH):
     """
     Classify all articles in the database, preserving existing classifications.
+    When --classify-all is specified, force reclassification of all articles.
     """
+    # Check if the classify-all flag was passed
+    force_classify_all = "--classify-all" in sys.argv
+    
     # Load articles from database
     articles = load_articles(db_path)
     print(f"Loaded {len(articles)} articles from database")
@@ -241,29 +258,36 @@ def classify_all(db_path=DEFAULT_DATABASE_JSON_PATH, model_json_path=DEFAULT_MOD
     articles_to_classify = []
     articles_to_preserve = []
     
-    for article in articles:
-        if article['link'] in existing_classifications:
-            # Preserve the existing classification
-            existing_article = existing_classifications[article['link']]
-            article['ai_political_leaning'] = existing_article['ai_political_leaning']
-            article['match_with_source'] = existing_article.get('match_with_source', False)
-            articles_to_preserve.append(article)
-        else:
-            articles_to_classify.append(article)
+    if force_classify_all:
+        print("\nForce classifying ALL articles regardless of existing classifications")
+        articles_to_classify = articles
+    else:
+        for article in articles:
+            if article['link'] in existing_classifications:
+                # Preserve the existing classification
+                existing_article = existing_classifications[article['link']]
+                article['ai_political_leaning'] = existing_article['ai_political_leaning']
+                article['match_with_source'] = existing_article.get('match_with_source', False)
+                articles_to_preserve.append(article)
+            else:
+                articles_to_classify.append(article)
     
-    print(f"\nFound {len(articles_to_classify)} new articles to classify")
-    print(f"Preserving {len(articles_to_preserve)} existing classifications")
+        print(f"\nFound {len(articles_to_classify)} new articles to classify")
+        print(f"Preserving {len(articles_to_preserve)} existing classifications")
     
     if articles_to_classify:
         # Classify new articles
-        print("\nClassifying new articles...")
+        print("\nClassifying articles...")
         for article in tqdm(articles_to_classify, desc="Classifying articles"):
             article = classify_article(article)
             # Add a small delay to avoid rate limiting
             time.sleep(random.uniform(1.0, 2.0))
         
-        # Combine preserved and new classifications
-        all_articles = articles_to_preserve + articles_to_classify
+        # Combine preserved and new classifications if not force_classify_all
+        if force_classify_all:
+            all_articles = articles_to_classify
+        else:
+            all_articles = articles_to_preserve + articles_to_classify
     else:
         print("No new articles to classify")
         all_articles = articles_to_preserve
@@ -306,10 +330,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     try:
-        if args.classify_all:
-            classify_all(args.db_path, args.model_json_path, args.model_csv_path)
-        else:
-            classify_new(args.db_path, args.model_json_path, args.model_csv_path)
+        # Note: The flag detection is now handled in the classify_all function itself
+        classify_all(args.db_path, args.model_json_path, args.model_csv_path)
     except KeyboardInterrupt:
         print("\nOperation interrupted by user.")
     except Exception as e:
