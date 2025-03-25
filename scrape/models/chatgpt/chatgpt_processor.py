@@ -49,7 +49,7 @@ DEFAULT_DATABASE_CSV_PATH = os.path.join(os.path.dirname(os.path.dirname(
 
 def classify_political_leaning(title, full_text, source_outlet=None, max_tokens=1000):
     """
-    Classify the political leaning of an article using CHATGPT API.
+    Classify the political leaning of an article using DeepSeek API.
     """
     # Truncate the text if it's too long
     if full_text and len(full_text) > max_tokens * 4:  # rough estimation of tokens
@@ -58,27 +58,14 @@ def classify_political_leaning(title, full_text, source_outlet=None, max_tokens=
     else:
         text_to_analyze = f"{title}\n\n{full_text}"
 
-    outlet_info = f"Publication: {source_outlet}\n\n" if source_outlet else ""
+    # Use a numerical rating scale instead of categorical labels
+    prompt = f"""Instructions: Political Bias Scale from -6 to 6, where -6 to -3 is left, -3 to -1 is lean-left, -1 to 1 is center, 1 to 3 is lean-right, and 3 to 6 is right. Leaning categories (like lean-left or lean-right) should indicate content that leans towards that side but does not strongly align with it. 
 
-    prompt = f"""Analyze the following news article and determine its political leaning.
-{outlet_info}
+A newspaper article is provided and you have to give it a decimal rating. Only analyze the article's content for language, framing, and overall tone to determine the political bias. Do NOT infer the news outlet or any external context beyond the article itself. If the bias is unclear, output the most appropriate rating based on the overall tone and content.
+
 Article: {text_to_analyze}
 
-Based ONLY on the content of this article, classify it into one of the following categories:
-- Left
-- Lean Left
-- Center
-- Lean Right
-- Right
-
-Consider factors such as:
-- Language and framing
-- Topics emphasized
-- Sources quoted
-- Overall narrative and tone
-
-Provide ONLY the category name as your answer (Left, Lean Left, Center, Lean Right, or Right). 
-Do not include any explanations or additional text.
+Output only a number between -6 and 6 that represents the political rating. No other text.
 """
 
     try:
@@ -89,16 +76,43 @@ Do not include any explanations or additional text.
             temperature=0.1
         )
 
-        # Extract the classification from the response
-        classification = response.choices[0].message.content.strip()
+        # Extract the numerical rating from the response
+        raw_response = response.choices[0].message.content.strip()
 
-        # Normalize the response to match our categories
-        for category in CATEGORIES:
-            if category.lower() in classification.lower():
-                return category
+        # Try to extract a number from the response
+        try:
+            # Remove any non-numeric characters except for decimal point and minus sign
+            cleaned_response = ''.join(
+                c for c in raw_response if c.isdigit() or c == '.' or c == '-')
+            rating = float(cleaned_response)
 
-        # If no exact match, return the response
-        return classification
+            # Map the numerical rating to the categorical labels
+            if rating <= -3:
+                return "Left"
+            elif rating < -1:
+                return "Lean Left"
+            elif rating <= 1:
+                return "Center"
+            elif rating < 3:
+                return "Lean Right"
+            else:
+                return "Right"
+        except:
+            # If we can't extract a valid number, check for category names in the response
+            raw_response_lower = raw_response.lower()
+            if "left" in raw_response_lower and "lean" in raw_response_lower:
+                return "Lean Left"
+            elif "right" in raw_response_lower and "lean" in raw_response_lower:
+                return "Lean Right"
+            elif "left" in raw_response_lower:
+                return "Left"
+            elif "right" in raw_response_lower:
+                return "Right"
+            elif "center" in raw_response_lower:
+                return "Center"
+            else:
+                # Default to "No content" if we can't determine the classification
+                return "No content"
 
     except Exception as e:
         print(f"Error classifying article: {e}")
