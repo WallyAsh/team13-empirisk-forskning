@@ -57,6 +57,7 @@ DEFAULT_DATABASE_CSV_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path
 def classify_political_leaning(title, full_text, source_outlet=None, max_tokens=1000):
     """
     Classify the political leaning of an article using DeepSeek API.
+    Returns a tuple of (numerical_rating, category)
     """
     # Truncate the text if it's too long
     if full_text and len(full_text) > max_tokens * 4:  # rough estimation of tokens
@@ -95,16 +96,20 @@ Output only a number between -6 and 6 that represents the political rating. No o
             
             # Map the numerical rating to the categorical labels
             if rating <= -3:
-                return "Left"
+                category = "Left"
             elif rating < -1:
-                return "Lean Left"
+                category = "Lean Left"
             elif rating <= 1:
-                return "Center"
+                category = "Center"
             elif rating < 3:
-                return "Lean Right"
+                category = "Lean Right"
             else:
-                return "Right"
-        except:
+                category = "Right"
+            
+            # Return both the numerical rating and the category
+            return (rating, category)
+            
+        except ValueError:
             # If we can't extract a valid number, check for category names in the response
             raw_response_lower = raw_response.lower()
             if "left" in raw_response_lower and "lean" in raw_response_lower:
@@ -141,12 +146,20 @@ def classify_article(article):
             return article
         
         # Classify the article
-        classification = classify_political_leaning(title, full_text, source_outlet)
-        article['ai_political_leaning'] = classification
+        classification_result = classify_political_leaning(title, full_text, source_outlet)
+        
+        # If we got a tuple result (numerical_rating, category)
+        if isinstance(classification_result, tuple):
+            numerical_rating, category = classification_result
+            article['ai_political_rating'] = numerical_rating
+            article['ai_political_leaning'] = category
+        else:
+            # For backward compatibility
+            article['ai_political_leaning'] = classification_result
         
         # Check if the classification matches the source rating
         source_rating = article.get('source_rating', "")
-        article['match_with_source'] = (classification == source_rating)
+        article['match_with_source'] = (article['ai_political_leaning'] == source_rating)
     
     return article
 
@@ -206,6 +219,7 @@ def print_classification_stats(articles):
     classification_counts = {category: 0 for category in CATEGORIES}
     match_count = 0
     total_with_text = 0
+    ratings = []
     
     for article in articles:
         if 'full_text' in article and article['full_text'] != "Not available...":
@@ -216,6 +230,10 @@ def print_classification_stats(articles):
             
             if article.get('match_with_source', False):
                 match_count += 1
+                
+        # Collect numerical ratings for statistics
+        if 'ai_political_rating' in article and article['ai_political_rating'] is not None:
+            ratings.append(article['ai_political_rating'])
     
     # Print distribution
     print("\nClassification Distribution:")
@@ -230,6 +248,30 @@ def print_classification_stats(articles):
         print(f"\nMatch with source ratings: {match_count}/{total_classified} ({match_percentage:.1f}%)")
     
     print(f"\nFull text available for {total_with_text} out of {len(articles)} articles ({total_with_text/len(articles)*100:.1f}%)")
+    
+    # Print numerical rating statistics if available
+    if ratings:
+        print("\nNumerical Rating Statistics:")
+        ratings.sort()
+        mean_rating = sum(ratings) / len(ratings)
+        median_rating = ratings[len(ratings) // 2]
+        print(f"Mean rating: {mean_rating:.2f}")
+        print(f"Median rating: {median_rating:.2f}")
+        print(f"Rating range: {min(ratings):.1f} to {max(ratings):.1f}")
+        
+        # Count ratings by category range
+        left_count = sum(1 for r in ratings if r <= -3)
+        lean_left_count = sum(1 for r in ratings if -3 < r < -1)
+        center_count = sum(1 for r in ratings if -1 <= r <= 1)
+        lean_right_count = sum(1 for r in ratings if 1 < r < 3)
+        right_count = sum(1 for r in ratings if r >= 3)
+        
+        print("\nNumerical Rating Distribution:")
+        print(f"Left range (-6 to -3): {left_count} ({left_count/len(ratings)*100:.1f}%)")
+        print(f"Lean Left range (-3 to -1): {lean_left_count} ({lean_left_count/len(ratings)*100:.1f}%)")
+        print(f"Center range (-1 to 1): {center_count} ({center_count/len(ratings)*100:.1f}%)")
+        print(f"Lean Right range (1 to 3): {lean_right_count} ({lean_right_count/len(ratings)*100:.1f}%)")
+        print(f"Right range (3 to 6): {right_count} ({right_count/len(ratings)*100:.1f}%)")
 
 #--------------------------------
 # Main Workflows
