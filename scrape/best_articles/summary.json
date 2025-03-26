@@ -1,0 +1,38 @@
+{
+    "total_articles": 125,
+    "sources": {
+        "Reuters": 5,
+        "The Guardian": 5,
+        "Associated Press": 5,
+        "Fox News Digital": 5,
+        "Just The News": 5,
+        "CNBC": 5,
+        "Washington Post": 5,
+        "Axios": 5,
+        "Gigafact": 5,
+        "Newsmax (News)": 5,
+        "Politico": 5,
+        "New York Times (News)": 5,
+        "Washington Examiner": 5,
+        "Newsweek": 5,
+        "Townhall": 5,
+        "BBC News": 5,
+        "CNN Digital": 5,
+        "New York Times (Opinion)": 5,
+        "Washington Times": 5,
+        "The Hill": 5,
+        "Wall Street Journal (News)": 5,
+        "ABC News (Online)": 5,
+        "Vox": 5,
+        "New York Post (News)": 5,
+        "FactCheck.org": 5
+    },
+    "source_ratings": {
+        "Center": 7,
+        "Left": 4,
+        "Right": 4,
+        "Lean Right": 4,
+        "Lean Left": 7,
+        "Not rated": 0
+    }
+}
