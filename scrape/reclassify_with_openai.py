@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Re-classify the cleaned articles with DeepSeek model.
+Re-classify the cleaned articles with OpenAI model.
 
 This script:
 1. Loads the cleaned articles from top5_per_source_final.json
-2. Classifies their political leaning using DeepSeek API
+2. Classifies their political leaning using OpenAI API
 3. Saves the classifications back to the file
 """
 
@@ -25,28 +25,26 @@ except ImportError:
     print("python-dotenv not installed. Using environment variables directly.")
     print("To use a .env file, install python-dotenv: pip install python-dotenv")
 
-# DeepSeek API configuration - Read from environment variable
-DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
-if not DEEPSEEK_API_KEY:
-    print("Error: DEEPSEEK_API_KEY environment variable is not set.")
+# OpenAI API configuration - Read from environment variable or set directly
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "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")
+if not OPENAI_API_KEY:
+    print("Error: OPENAI_API_KEY environment variable is not set.")
     print("Please set it using:")
-    print("export DEEPSEEK_API_KEY='your-api-key-here'")
+    print("export OPENAI_API_KEY='your-api-key-here'")
     print("or add it to your .env file and load it with a package like python-dotenv.")
     sys.exit(1)
 
-DEEPSEEK_BASE_URL = "https://api.deepseek.com"
-
-# Configure the OpenAI client to use DeepSeek
-client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
+# Configure the OpenAI client
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Define the categories and file paths
 CATEGORIES = ["Left", "Lean Left", "Center", "Lean Right", "Right"]
 INPUT_FILE = 'best_articles/top5_per_source_final.json'
-OUTPUT_FILE = 'best_articles/top5_per_source_rated.json'
+OUTPUT_FILE = 'best_articles/top5_per_source_rated_openai.json'
 
 def classify_political_leaning(title, full_text, max_tokens=8000):
     """
-    Classify the political leaning of an article using DeepSeek API.
+    Classify the political leaning of an article using OpenAI API.
     Returns a tuple of (numerical_rating, category)
     """
     # Use the full text without truncation
@@ -63,9 +61,9 @@ Output only a number between -6 and 6 that represents the political rating. No o
 """
 
     try:
-        # Make the API call to DeepSeek
+        # Make the API call to OpenAI
         response = client.chat.completions.create(
-            model="deepseek-chat",
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=20,
             temperature=0.1
@@ -123,12 +121,12 @@ def print_classification_stats(articles):
     ratings = []
     
     for article in articles:
-        if 'ai_political_leaning' in article and article['ai_political_leaning'] in CATEGORIES:
-            classification_counts[article['ai_political_leaning']] += 1
+        if 'openai_political_leaning' in article and article['openai_political_leaning'] in CATEGORIES:
+            classification_counts[article['openai_political_leaning']] += 1
                 
         # Collect numerical ratings for statistics
-        if 'ai_political_rating' in article and article['ai_political_rating'] is not None:
-            ratings.append(article['ai_political_rating'])
+        if 'openai_political_rating' in article and article['openai_political_rating'] is not None:
+            ratings.append(article['openai_political_rating'])
     
     # Print distribution
     print("\nClassification Distribution:")
@@ -181,16 +179,16 @@ def main():
         
         # Skip articles without full text
         if not full_text:
-            article['ai_political_leaning'] = "No content"
-            article['ai_political_rating'] = None
+            article['openai_political_leaning'] = "No content"
+            article['openai_political_rating'] = None
             continue
         
         # Classify the article
         numerical_rating, category = classify_political_leaning(title, full_text)
         
-        # Add the classification to the article
-        article['ai_political_rating'] = numerical_rating
-        article['ai_political_leaning'] = category
+        # Add the classification to the article using different field names
+        article['openai_political_rating'] = numerical_rating
+        article['openai_political_leaning'] = category
         
         # Add a small delay to avoid rate limiting
         time.sleep(random.uniform(1.0, 2.0))
