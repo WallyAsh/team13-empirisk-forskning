@@ -14,6 +14,9 @@ import sys
 import time
 import random
 from tqdm import tqdm
+import threading
+from collections import deque
+from datetime import datetime, timedelta
 
 # Try to load .env file if dotenv is installed
 try:
@@ -44,6 +47,35 @@ if not GEMINI_API_KEY:
 # Configure the Gemini client
 genai_client = genai.Client(api_key=GEMINI_API_KEY)
 
+# Rate limiter class for Gemini API
+class RateLimiter:
+    def __init__(self, max_requests_per_minute=10):
+        self.max_requests = max_requests_per_minute
+        self.request_times = deque()
+        self.lock = threading.Lock()
+
+    def wait_if_needed(self):
+        """Wait if we're about to exceed our rate limit"""
+        with self.lock:
+            now = datetime.now()
+            
+            # Remove request timestamps older than 1 minute
+            while self.request_times and self.request_times[0] < now - timedelta(minutes=1):
+                self.request_times.popleft()
+            
+            # If we've hit our limit for the last minute, wait until we can make another request
+            if len(self.request_times) >= self.max_requests:
+                wait_time = (self.request_times[0] + timedelta(minutes=1) - now).total_seconds()
+                if wait_time > 0:
+                    print(f"\nRate limit approached. Waiting {wait_time:.1f} seconds...")
+                    time.sleep(wait_time + 0.1)  # Add a small buffer
+            
+            # Add this request's timestamp
+            self.request_times.append(now)
+
+# Create rate limiter with safer limit (10 requests per minute)
+rate_limiter = RateLimiter(max_requests_per_minute=10)
+
 # Define the categories and file paths
 CATEGORIES = ["Left", "Lean Left", "Center", "Lean Right", "Right"]
 INPUT_FILE = 'best_articles/top5_per_source_final.json'
@@ -54,6 +86,9 @@ def classify_political_leaning(title, full_text, max_length=30000):
     Classify the political leaning of an article using Gemini API.
     Returns a tuple of (numerical_rating, category)
     """
+    # Wait if needed to avoid rate limiting
+    rate_limiter.wait_if_needed()
+    
     # Truncate the text if it's too long (Gemini might have input limits)
     if full_text and len(full_text) > max_length:
         text_sample = full_text[:max_length]
@@ -199,8 +234,8 @@ def main():
         article['gemini_political_rating'] = numerical_rating
         article['gemini_political_leaning'] = category
         
-        # Add a small delay to avoid rate limiting
-        time.sleep(random.uniform(1.0, 2.0))
+        # Add a small delay for safety, but main rate limiting is handled by RateLimiter
+        time.sleep(random.uniform(0.5, 1.0))
     
     # Save the results
     print(f"\nSaving results to {OUTPUT_FILE}")
