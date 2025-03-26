@@ -480,61 +480,6 @@
         "openai_political_leaning": "Center"
     },
     {
-        "title": "Is there evidence linking the Texas measles outbreak to a surge in illegal immigration?",
-        "link": "https://www.allsides.com/news/2025-03-21-1231/facts-and-fact-checking-there-evidence-linking-texas-measles-outbreak-surge",
-        "source_outlet": "Gigafact",
-        "source_url": "https://www.allsides.com/news-source/gigafact-media-bias",
-        "source_rating": "Center",
-        "original_source": "https://gigafact.org/fact-briefs/is-there-evidence-linking-the-texas-measles-outbreak-to-a-surge-in-illegal-immigration/?utm_source=allsides&utm_id=112",
-        "full_text": "no\n\nThough Texas health officials have been unable to pinpoint the source of the measles outbreak that began in a Gaines County Mennonite community, there is no evidence connecting it to illegal immigration.\n\nMeasles outbreaks typically occur when an unvaccinated person is exposed to the highly contagious virus, and in turn exposes members of undervaccinated communities. A vaccination rate of roughly 95% is required to achieve herd immunity against measles, a level of protection that makes it challenging for infections to spread.\n\nAs of the 2023-2024 school year, just 82% of Gaines County kindergarteners were up to date on their measles, mumps and rubella vaccines.\n\nMeasles was declared eliminated in the U.S. in 2000, but isolated outbreaks still occur when international travelers return from affected regions to communities with low immunization rates. A 2019 case linked to travel in Israel, for instance, affected a Hasidic Jewish community in New York.",
-        "openai_political_rating": -1.0,
-        "openai_political_leaning": "Center"
-    },
-    {
-        "title": "Is there a consensus that a majority of Americans are living paycheck to paycheck?",
-        "link": "https://www.allsides.com/news/2025-02-26-1642/facts-and-fact-checking-there-consensus-majority-americans-are-living-paycheck",
-        "source_outlet": "Gigafact",
-        "source_url": "https://www.allsides.com/news-source/gigafact-media-bias",
-        "source_rating": "Center",
-        "original_source": "https://gigafact.org/fact-briefs/is-there-a-consensus-that-a-majority-of-americans-are-living-paycheck-to-paycheck/?utm_source=allsides&utm_id=112",
-        "full_text": "no\n\nWhile one survey by LendingClub found that more than 60% of Americans reported living paycheck to paycheck, others recorded lower numbers. LendingClub asked 3,252 U.S. consumers if they needed their next paycheck to cover their monthly spending; 62% answered yes.\n\nIn contrast, the Federal Reserve found that 54% of Americans have emergency savings to cover three months of expenses. Bankrate found that while 59% of Americans are uncomfortable with their level of emergency savings, 34% are living paycheck to paycheck.\n\nThe lack of consensus may be explained by the ambiguity of the term \u201cpaycheck to paycheck.\u201d For example, almost half of Americans surveyed by Bank of America said they were living paycheck to paycheck but only a quarter spent 95% of their income on necessities.\n\nNevertheless, financial hardship remains a widespread issue in America. Jeffrey Fuhrer estimates 43% of all U.S. families fall short of meeting basic needs.",
-        "openai_political_rating": 0.0,
-        "openai_political_leaning": "Center"
-    },
-    {
-        "title": "Do Native American tribal members in Oklahoma pay taxes?",
-        "link": "https://www.allsides.com/news/2025-03-18-1044/facts-and-fact-checking-do-native-american-tribal-members-oklahoma-pay-taxes",
-        "source_outlet": "Gigafact",
-        "source_url": "https://www.allsides.com/news-source/gigafact-media-bias",
-        "source_rating": "Center",
-        "original_source": "https://gigafact.org/fact-briefs/do-native-american-tribal-members-in-oklahoma-pay-taxes/?utm_source=allsides&utm_id=112",
-        "full_text": "yes\n\nThough tribes are exempt from taxes as sovereign nations, individuals within the tribe\u2013as U.S. citizens\u2013pay income taxes to the federal government.\n\nA notable exception occurs with tribal land; income derived directly from tribal land is not taxable. Taxes are not paid on lands held in trust, as these lands and their generated revenues are set aside by the U.S. government for the benefit of the tribes.\n\nIn Oklahoma, the incomes of tribal members living on tribal land are exempt from state taxes if (1) their income is derived from sources within that land, or (2) the income is payment to an active member of the U.S. armed forces.\n\nTribal casinos are exempt from taxes, but pay gaming exclusivity fees. In Oklahoma, these fees are based on revenue on a sliding scale. In 2024, Oklahoma collected $210.2 million in exclusivity fees from $3.47 billion in revenue.",
-        "openai_political_rating": 0.0,
-        "openai_political_leaning": "Center"
-    },
-    {
-        "title": "Are 1 in 4 Oklahomans enrolled in Medicaid?",
-        "link": "https://www.allsides.com/news/2025-03-13-0755/facts-and-fact-checking-are-1-4-oklahomans-enrolled-medicaid",
-        "source_outlet": "Gigafact",
-        "source_url": "https://www.allsides.com/news-source/gigafact-media-bias",
-        "source_rating": "Center",
-        "original_source": "https://gigafact.org/fact-briefs/are-1-in-4-oklahomans-enrolled-in-medicaid/?utm_source=allsides&utm_id=112",
-        "full_text": "yes\n\nData from the Oklahoma Health Care Authority shows that 1,043,474 people \u2013 25% of Oklahoma\u2019s population \u2013 are enrolled in Oklahoma SoonerCare, or Medicaid, as of June 2024.\n\nThat is a 111,792 decrease from the number enrolled as of November 2021.\n\nForty-seven percent of Medicaid enrollees are adults and 53% are children. Nearly 16% of Medicaid members are aged, blind, or disabled and 14,142 of them are residing in a long-term care facility.\n\nIncome qualifications for Oklahoma SoonerCare are based on income and vary by household size. The yearly modified adjusted gross income of a one-adult household must be under $20,784, and that of a two-adult household under $28,224. Applicants must also provide proof of U.S. citizenship and identity.\n\nThe Republican-controlled U.S. House recently proposed a budget resolution that could cut $800 billion from Medicaid.",
-        "openai_political_rating": -1.5,
-        "openai_political_leaning": "Lean Left"
-    },
-    {
-        "title": "Are Wisconsin sheriffs required to check the immigration status of people in jail?",
-        "link": "https://www.allsides.com/news/2025-03-05-2135/facts-and-fact-checking-are-wisconsin-sheriffs-required-check-immigration",
-        "source_outlet": "Gigafact",
-        "source_url": "https://www.allsides.com/news-source/gigafact-media-bias",
-        "source_rating": "Center",
-        "original_source": "https://gigafact.org/fact-briefs/wisconsin-sheriffs-immigration-jail-ice-vos-republican/?utm_source=allsides&utm_id=112",
-        "full_text": "no\n\nWisconsin sheriffs have discretion on whether to report a person booked into county jails to U.S. Immigration and Customs Enforcement (ICE).\n\nWisconsin Assembly Speaker Robin Vos, a Racine County Republican, alluded to the background checking Feb. 25.\n\nVos spoke about an Assembly bill he co-sponsored that would require sheriffs to request proof of legal presence status from individuals jailed for a felony offense.\n\nFormer Brown County Sheriff John Gossage, executive director of the Badger State Sheriffs\u2019 Association, said most Wisconsin sheriffs report to ICE a person who is jailed on a felony charge and doesn\u2019t have proof, such as a Social Security number or immigration visa, of legal presence in the U.S.\n\nICE can ask, but jails are not required, to hold a person for 48 hours if ICE wants to pick up that person for an alleged immigration violation.",
-        "openai_political_rating": 1.0,
-        "openai_political_leaning": "Center"
-    },
-    {
         "title": "Ukraine's Osadchuk to Newsmax: Zelenskyy Has Ukraine's Support",
         "link": "https://www.allsides.com/news/2025-03-04-0505/world-ukraines-osadchuk-newsmax-zelenskyy-has-ukraines-support",
         "source_outlet": "Newsmax (News)",
