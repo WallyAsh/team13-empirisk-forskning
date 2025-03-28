@@ -65,7 +65,7 @@ Output only a number between -6 and 6 that represents the political rating. No o
     try:
         # Make the API call to DeepSeek
         response = client.chat.completions.create(
-            model="deepseek-chat",
+            model="deepseek-reasoner",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=20,
             temperature=0.1
