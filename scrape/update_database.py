@@ -247,9 +247,9 @@ def scrape_allsides_page(url):
                     if "Rating:" in alt_text:
                         rating = alt_text.split("Rating:")[-1].strip()
                     else:
-                        rating = "Not rated"
+                        rating = "Right"
                 else:
-                    rating = "Not rated"
+                    rating = "Right"
             else:
                 outlet = "No source found"
                 source_url = "No source URL found"
