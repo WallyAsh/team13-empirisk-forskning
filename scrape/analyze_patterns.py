@@ -127,23 +127,84 @@ def analyze_error_patterns(df):
     print("\nError patterns by source rating:")
     print(error_stats.to_string(index=False))
     
-    # Create error pattern plot
+    # Create error pattern plot with improved formatting
     plt.figure(figsize=(12, 8))
     
+    # Set better font sizes
+    plt.rcParams.update({
+        'font.size': 14,
+        'font.weight': 'bold',
+        'axes.titlesize': 18,
+        'axes.labelsize': 16,
+        'axes.titleweight': 'bold',
+        'axes.labelweight': 'bold',
+        'xtick.labelsize': 14,
+        'ytick.labelsize': 14,
+        'legend.fontsize': 14
+    })
+    
+    # Define better model names and colors
+    model_names = {
+        'deepseek': 'DeepSeek V3',
+        'openai': 'OpenAI GPT-4o',
+        'gemini': 'Google Gemini'
+    }
+    
+    colors = {
+        'deepseek': '#1f77b4',  # blue
+        'openai': '#ff7f0e',    # orange
+        'gemini': '#2ca02c'     # green
+    }
+    
+    # Plot each model with improved styling
     for model in df['model'].unique():
         model_data = error_stats[error_stats['model'] == model]
         plt.plot(model_data['source_rating'], model_data['mean_error'], 
-                marker='o', label=model, linewidth=2)
-        
-    plt.axhline(y=0, color='black', linestyle='--', alpha=0.3)
-    plt.title('Mean Error by Source Rating', fontsize=14, pad=20)
-    plt.xlabel('AllSides Rating', fontsize=12)
-    plt.ylabel('Mean Error (AI - AllSides)', fontsize=12)
-    plt.grid(alpha=0.3)
-    plt.legend(title='AI Model')
+                marker='o', label=model_names.get(model, model.capitalize()),
+                color=colors.get(model), linewidth=2.5, markersize=8)
     
+    # Add zero line with better visibility
+    plt.axhline(y=0, color='black', linestyle='--', alpha=0.5, linewidth=1.5, label="Perfect Agreement")
+    
+    # Add title and labels with better formatting
+    plt.title('Mean Error by AllSides Rating', fontsize=20, fontweight='bold', pad=15)
+    plt.xlabel('AllSides Rating', fontsize=16, fontweight='bold')
+    plt.ylabel('Mean Error (AI - AllSides)', fontsize=16, fontweight='bold')
+    
+    # Add grid with better visibility
+    plt.grid(alpha=0.3, linewidth=1.0)
+    
+    # Improve legend
+    plt.legend(title="AI Model", title_fontsize=14, fontsize=14, 
+              frameon=True, framealpha=0.95, edgecolor='black',
+              loc='upper right')
+    
+    # Set x-axis limits to focus on where data exists
+    min_rating = error_stats['source_rating'].min()
+    max_rating = error_stats['source_rating'].max()
+    buffer = 0.5  # Add buffer space
+    plt.xlim(min_rating - buffer, max_rating + buffer)
+    
+    # Add annotation to note the scale
+    plt.figtext(0.02, 0.02, 
+               f"Note: Showing data range ({min_rating:.1f} to {max_rating:.1f}) from full scale (-6 to +6)",
+               fontsize=10, style='italic')
+    
+    # Set y-axis limits to better show the pattern
+    y_min = min(error_stats['mean_error']) - 0.5
+    y_max = max(error_stats['mean_error']) + 0.5
+    plt.ylim(y_min, y_max)
+    
+    # Make spines visible
+    for spine in plt.gca().spines.values():
+        spine.set_linewidth(1.5)
+    
+    # Add more prominent tick marks
+    plt.tick_params(width=1.5, length=6)
+    
+    # Save with tight layout and higher DPI
     plt.tight_layout()
-    plt.savefig(os.path.join(FIGURES_DIR, 'error_by_rating.png'))
+    plt.savefig(os.path.join(FIGURES_DIR, 'error_by_rating.png'), dpi=300, bbox_inches='tight')
     print(f"\nError by rating plot saved to {os.path.join(FIGURES_DIR, 'error_by_rating.png')}")
 
 def analyze_agreement_patterns(df):

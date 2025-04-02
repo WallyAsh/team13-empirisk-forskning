@@ -210,14 +210,18 @@ def create_error_distribution_plot(df, metrics):
     """Create a more readable error distribution plot"""
     plt.figure(figsize=(16, 10))
     
-    # Set global font sizes for better readability
+    # Set global font parameters for better readability
     plt.rcParams.update({
-        'font.size': 16,
-        'axes.titlesize': 22,
-        'axes.labelsize': 20,
-        'xtick.labelsize': 16,
-        'ytick.labelsize': 16,
-        'legend.fontsize': 16,
+        'font.size': 17,  # Slightly reduced from 18
+        'font.weight': 'bold',
+        'axes.titlesize': 24,
+        'axes.labelsize': 22,
+        'axes.titleweight': 'bold',
+        'axes.labelweight': 'bold',
+        'xtick.labelsize': 17,  # Slightly reduced from 18
+        'ytick.labelsize': 17,  # Slightly reduced from 18
+        'legend.fontsize': 15,  # Slightly reduced from 16
+        'legend.title_fontsize': 17  # Slightly reduced from 18
     })
     
     models = ['deepseek', 'openai', 'gemini']
@@ -252,13 +256,12 @@ def create_error_distribution_plot(df, metrics):
     plt.axvspan(-6, -2, alpha=0.15, color='red')
     plt.axvspan(2, 6, alpha=0.15, color='red', label="Large Error (>2)")
     
-    # Add title and labels with increased font size
-    plt.title("Error Distribution by AI Model", fontsize=24, fontweight='bold', pad=15)
-    plt.xlabel("Error (AI Rating - AllSides Rating)", fontsize=20, fontweight='bold')
-    plt.ylabel("Count", fontsize=20, fontweight='bold')
+    # Add labels with increased font size and bold weight
+    plt.xlabel("Error (AI Rating - AllSides Rating)", fontsize=24, fontweight='bold')
+    plt.ylabel("Count", fontsize=24, fontweight='bold')
     
-    # Increase legend size and visibility
-    plt.legend(fontsize=18, frameon=True, framealpha=0.95, edgecolor='black')
+    # Increase legend size and visibility, but make it more compact
+    plt.legend(fontsize=16, frameon=True, framealpha=0.90, edgecolor='black', title_fontsize=18)
     
     # Improved grid
     plt.grid(alpha=0.3, linewidth=1.0)
@@ -268,7 +271,7 @@ def create_error_distribution_plot(df, metrics):
         spine.set_linewidth(2.0)
     
     # Add more prominent tick marks
-    plt.tick_params(width=2.0, length=8, labelsize=16)
+    plt.tick_params(width=2.0, length=8, labelsize=17)
     
     # Save the plot with higher DPI
     output_file = os.path.join(FIGURES_DIR, "error_distribution_improved.png")

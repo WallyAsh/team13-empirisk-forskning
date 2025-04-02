@@ -13,6 +13,8 @@ import seaborn as sns
 from matplotlib.lines import Line2D
 from scipy.stats import pearsonr
 from sklearn.metrics import mean_absolute_error, mean_squared_error
+from scipy import stats
+import matplotlib.patheffects as path_effects
 
 # Create figures directory if it doesn't exist
 FIGURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "figures")
@@ -269,21 +271,25 @@ def create_combined_scatterplots(df, metrics):
     """Create a combined figure with all three AI vs AllSides plots in subplots"""
     # Define models for each subplot in the order (a), (b), (c)
     model_order = ['openai', 'deepseek', 'gemini']
-    model_names = {'deepseek': 'DeepSeek R1', 'openai': 'OpenAI GPT-4o', 'gemini': 'Google Gemini Flash 2.0'}
+    model_names = {'deepseek': 'DeepSeek V3', 'openai': 'OpenAI GPT-4o', 'gemini': 'Google Gemini Flash 2.0'}
     subplot_labels = ['(a)', '(b)', '(c)']
     
-    # Set global font sizes for better readability
+    # Set global font parameters for better readability
     plt.rcParams.update({
-        'font.size': 14,
-        'axes.titlesize': 18,
-        'axes.labelsize': 16,
-        'xtick.labelsize': 14,
-        'ytick.labelsize': 14,
-        'legend.fontsize': 16,  # Increased legend font size
+        'font.size': 18,
+        'font.weight': 'bold',
+        'axes.titlesize': 24,
+        'axes.labelsize': 22,
+        'axes.titleweight': 'bold',
+        'axes.labelweight': 'bold',
+        'xtick.labelsize': 18,
+        'ytick.labelsize': 18,
+        'legend.fontsize': 18,
+        'legend.title_fontsize': 20
     })
     
     # Create a figure with three subplots in a row with adjusted size
-    fig, axes = plt.subplots(1, 3, figsize=(24, 10), sharey=True, sharex=True)
+    fig, axes = plt.subplots(1, 3, figsize=(24, 8))
     
     # Create each subplot
     for i, model in enumerate(model_order):
@@ -317,7 +323,7 @@ def create_combined_scatterplots(df, metrics):
         # Get metrics for this model
         model_metrics = metrics.get(model, {})
         
-        # Add statistics to plot with larger font and more visible box
+        # Add statistics to plot with larger font but no box
         stats_text = (
             f"r = {model_metrics.get('correlation', 0):.2f}\n"
             f"MAE = {model_metrics.get('mae', 0):.2f}\n"
@@ -326,9 +332,13 @@ def create_combined_scatterplots(df, metrics):
             f"n = {model_metrics.get('sample_size', 0)}"
         )
         
-        ax.annotate(stats_text, xy=(0.03, 0.97), xycoords='axes fraction',
-                   ha='left', va='top', fontsize=16,
-                   bbox=dict(boxstyle='round', fc='white', alpha=0.85, edgecolor='black', pad=0.5))
+        # Add stats text with white outline for better readability
+        text = ax.text(0.03, 0.97, stats_text,
+                      transform=ax.transAxes,
+                      ha='left', va='top',
+                      fontsize=16,
+                      fontweight='bold')
+        text.set_path_effects([path_effects.withStroke(linewidth=3, foreground='white')])
         
         # Add subplot label (a), (b), or (c) with larger font
         ax.annotate(subplot_labels[i], xy=(0.95, 0.95), xycoords='axes fraction', 
@@ -359,20 +369,18 @@ def create_combined_scatterplots(df, metrics):
     
     # Create a common legend for all subplots with larger markers
     legend_elements = [Line2D([0], [0], marker='o', color='w', 
-                           markerfacecolor=color, markersize=20,  # Increased marker size
+                           markerfacecolor=color, markersize=20,
                            markeredgecolor='black', markeredgewidth=0.5,
                            label=category)
                    for category, color in CATEGORY_COLORS.items()]
     
     # Use the figure to create a single legend for all subplots
-    # Moved legend closer to plots by adjusting bbox_to_anchor
-    fig.legend(handles=legend_elements, title="Source Category", title_fontsize=18,  # Increased title size
-              loc='lower center', bbox_to_anchor=(0.5, -0.03), ncol=5, fontsize=16,  # Adjusted position and size
+    fig.legend(handles=legend_elements, title="Source Category", title_fontsize=18,
+              loc='lower center', bbox_to_anchor=(0.5, -0.03), ncol=5, fontsize=16,
               frameon=True, framealpha=0.95, edgecolor='black')
     
     # Adjust layout
     plt.tight_layout()
-    # Reduced bottom margin to bring legend closer to plots
     plt.subplots_adjust(bottom=0.13)
     
     # Save the combined figure with higher DPI
