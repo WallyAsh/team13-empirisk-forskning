@@ -74,7 +74,7 @@ class RateLimiter:
             self.request_times.append(now)
 
 # Create rate limiter with safer limit (10 requests per minute)
-rate_limiter = RateLimiter(max_requests_per_minute=10)
+rate_limiter = RateLimiter(max_requests_per_minute=5)
 
 # Define the categories and file paths
 CATEGORIES = ["Left", "Lean Left", "Center", "Lean Right", "Right"]
@@ -109,7 +109,7 @@ Output only a number between -6 and 6 that represents the political rating. No o
     try:
         # Make the API call to Gemini
         response = genai_client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-pro-exp-03-25",
             contents=prompt
         )
         
