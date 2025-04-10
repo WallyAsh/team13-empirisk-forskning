@@ -144,6 +144,19 @@ def calculate_metrics(df):
 
 def create_publication_plots():
     """Create publication-quality plots for all models"""
+    # Set global font sizes
+    plt.rcParams.update({
+        'font.size': 14,
+        'axes.titlesize': 18,
+        'axes.labelsize': 16,
+        'xtick.labelsize': 14,
+        'ytick.labelsize': 14,
+        'legend.fontsize': 14,
+        'font.weight': 'bold',
+        'axes.titleweight': 'bold',
+        'axes.labelweight': 'bold'
+    })
+    
     # Load data for each model
     all_data = {}
     for config in MODEL_CONFIGS:
@@ -156,8 +169,8 @@ def create_publication_plots():
         if not df.empty:
             metrics[model_key] = calculate_metrics(df)
     
-    # Create figure with subplots - increase bottom margin for legend
-    fig, axes = plt.subplots(1, 3, figsize=(16, 6), sharey=True, sharex=True)
+    # Create figure with subplots - significantly larger figure size
+    fig, axes = plt.subplots(1, 3, figsize=(24, 8), sharey=True, sharex=True)
     fig.subplots_adjust(bottom=0.25)  # Increased from 0.2 to 0.25 to make more room
     
     # Create plots for each model
@@ -175,11 +188,11 @@ def create_publication_plots():
                 df['ai_rating'],
                 c=[CATEGORY_COLORS.get(cat, "#000000") for cat in df['source_category']],
                 alpha=0.7, 
-                s=40
+                s=60  # Increased point size from 50 to 60
             )
             
             # Add diagonal perfect agreement line
-            ax.plot([-6, 6], [-6, 6], 'k--', alpha=0.6)
+            ax.plot([-6, 6], [-6, 6], 'k--', alpha=0.6, linewidth=1.5)  # Increased linewidth
             
             # Add green band for "close enough" agreement
             ax.fill_between([-6, 6], [-6-1, 6-1], [-6+1, 6+1], color='green', alpha=0.05)
@@ -189,7 +202,7 @@ def create_publication_plots():
                 ax.axvline(x=boundary, color='lightgray', linestyle='--', alpha=0.6)
                 ax.axhline(y=boundary, color='lightgray', linestyle='--', alpha=0.6)
             
-            # Add metrics text
+            # Add metrics text with larger font and bold
             metrics_text = (
                 f"r = {model_metrics['correlation']:.2f}\n"
                 f"MAE = {model_metrics['mae']:.2f}\n"
@@ -198,19 +211,20 @@ def create_publication_plots():
                 f"n = {model_metrics['sample_size']}"
             )
             ax.text(0.05, 0.95, metrics_text, transform=ax.transAxes,
-                   va='top', ha='left', bbox=dict(facecolor='white', alpha=0.7, boxstyle='round'))
+                   va='top', ha='left', fontsize=16, fontweight='bold',
+                   bbox=dict(facecolor='white', alpha=0.7, boxstyle='round'))
             
-            # Add subplot label (a, b, c)
+            # Add subplot label (a, b, c) with larger font
             ax.text(0.95, 0.95, config['subplot_label'], transform=ax.transAxes,
-                   va='top', ha='right', fontsize=14, fontweight='bold')
+                   va='top', ha='right', fontsize=20, fontweight='bold')
             
-            # Set title
-            ax.set_title(config['name'], fontsize=14, fontweight='bold')
+            # Set title (already using fontsize from rcParams)
+            ax.set_title(config['name'])
             
-            # Set axis labels for leftmost plot and bottom plots
+            # Set axis labels (already using fontsize from rcParams)
             if i == 0:
-                ax.set_ylabel('AI Rating (-6 to 6)', fontsize=12)
-            ax.set_xlabel('AllSides Rating (-6 to 6)', fontsize=12)
+                ax.set_ylabel('AI Rating (-6 to 6)')
+            ax.set_xlabel('AllSides Rating (-6 to 6)')
             
             # Set axis limits
             ax.set_xlim(-6, 6)
@@ -220,11 +234,12 @@ def create_publication_plots():
     legend_elements = []
     for category, color in CATEGORY_COLORS.items():
         legend_elements.append(plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=color, 
-                                        markersize=10, label=category))
+                                        markersize=16, label=category))  # Increased markersize
     
-    # Position legend lower by setting bbox_to_anchor y value to -0.1 (below the figure)
+    # Position legend lower with larger font
     fig.legend(handles=legend_elements, loc='lower center', ncol=5, 
-              title='Source Category', bbox_to_anchor=(0.5, 0), fontsize=10)
+              title='Source Category', bbox_to_anchor=(0.5, 0), fontsize=16,
+              title_fontsize=18, frameon=True, framealpha=0.8)
     
     # Adjust layout with wider padding at bottom for legend
     plt.tight_layout(rect=[0, 0.1, 1, 1])  # rect=[left, bottom, right, top]
