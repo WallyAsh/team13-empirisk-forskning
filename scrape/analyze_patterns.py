@@ -12,13 +12,13 @@ import seaborn as sns
 from scipy import stats
 
 # Create figures directory if it doesn't exist
-FIGURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "figures")
+FIGURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "new_figures")
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
 # File paths for the AI model results
-DEEPSEEK_FILE = 'best_articles/top5_per_source_rated_deepseek.json'
-OPENAI_FILE = 'best_articles/top5_per_source_rated_openai.json'
-GEMINI_FILE = 'best_articles/top5_per_source_rated_gemini.json'
+DEEPSEEK_FILE = 'balanced_dataset/cleaned_articles_rated_deepseek.json'
+OPENAI_FILE = 'balanced_dataset/cleaned_articles_rated_openai.json'
+GEMINI_FILE = 'balanced_dataset/cleaned_articles_rated_gemini.json'
 
 def load_and_merge_data():
     """Load and merge data from all models"""

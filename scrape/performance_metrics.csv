@@ -1,0 +1,11 @@
+Metric,DeepSeek V3,GPT-4o,Gemini Flash 2.0
+Correlation (r),0.539,0.632,0.599
+R-squared,0.291,0.399,0.359
+Mean Absolute Error,1.944,1.729,1.737
+Root Mean Squared Error,2.453,2.289,2.303
+Category Accuracy (%),38.3%,40.3%,41.7%
+Directional Accuracy (%),54.7%,70.7%,68.0%
+Small Error (<1) (%),34.0%,40.7%,34.0%
+Medium Error (1-2) (%),24.7%,28.3%,32.3%
+Large Error (>2) (%),41.3%,31.0%,33.7%
+Sample Size,300,300,300
