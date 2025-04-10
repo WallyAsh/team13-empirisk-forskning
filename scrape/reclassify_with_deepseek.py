@@ -3,7 +3,7 @@
 Re-classify the cleaned articles with DeepSeek model.
 
 This script:
-1. Loads the cleaned articles from top5_per_source_final.json
+1. Loads the cleaned articles from balanced_dataset/cleaned_articles.json
 2. Classifies their political leaning using DeepSeek API
 3. Saves the classifications back to the file
 """
@@ -41,8 +41,8 @@ client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
 
 # Define the categories and file paths
 CATEGORIES = ["Left", "Lean Left", "Center", "Lean Right", "Right"]
-INPUT_FILE = 'best_articles/top5_per_source_final.json'
-OUTPUT_FILE = 'best_articles/top5_per_source_rated.json'
+INPUT_FILE = 'balanced_dataset/cleaned_articles.json'
+OUTPUT_FILE = 'balanced_dataset/cleaned_articles_rated_deepseek.json'
 
 def classify_political_leaning(title, full_text, max_tokens=8000):
     """

@@ -3,7 +3,7 @@
 Re-classify the cleaned articles with Google's Gemini model.
 
 This script:
-1. Loads the cleaned articles from top5_per_source_final.json
+1. Loads the cleaned articles from balanced_dataset/cleaned_articles.json
 2. Classifies their political leaning using Gemini 2.0 Flash API
 3. Saves the classifications back to the file
 """
@@ -78,10 +78,10 @@ rate_limiter = RateLimiter(max_requests_per_minute=5)
 
 # Define the categories and file paths
 CATEGORIES = ["Left", "Lean Left", "Center", "Lean Right", "Right"]
-INPUT_FILE = 'best_articles/top5_per_source_final.json'
-OUTPUT_FILE = 'best_articles/top5_per_source_rated_gemini.json'
+INPUT_FILE = 'balanced_dataset/cleaned_articles.json'
+OUTPUT_FILE = 'balanced_dataset/cleaned_articles_rated_gemini.json'
 
-def classify_political_leaning(title, full_text, max_length=30000):
+def classify_political_leaning(title, full_text):
     """
     Classify the political leaning of an article using Gemini API.
     Returns a tuple of (numerical_rating, category)
@@ -89,12 +89,8 @@ def classify_political_leaning(title, full_text, max_length=30000):
     # Wait if needed to avoid rate limiting
     rate_limiter.wait_if_needed()
     
-    # Truncate the text if it's too long (Gemini might have input limits)
-    if full_text and len(full_text) > max_length:
-        text_sample = full_text[:max_length]
-        text_to_analyze = f"{title}\n\nExcerpt from article:\n{text_sample}..."
-    else:
-        text_to_analyze = f"{title}\n\n{full_text}"
+    # Use the full text without truncation
+    text_to_analyze = f"{title}\n\n{full_text}"
     
     # Create the prompt
     prompt = f"""Instructions: Political Bias Scale from -6 to 6, where -6 to -3 is left, -3 to -1 is lean-left, -1 to 1 is center, 1 to 3 is lean-right, and 3 to 6 is right. Leaning categories (like lean-left or lean-right) should indicate content that leans towards that side but does not strongly align with it. 
